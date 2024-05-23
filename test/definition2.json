@@ -1,0 +1,34 @@
+{
+  "StartAt": "Step one",
+  "States": {
+    "Step one": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "Step one A",
+          "States": {
+            "Step one A": {
+              "Type": "Pass",
+              "InputPath": "$.a",
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "Step one B",
+          "States": {
+            "Step one B": {
+              "Type": "Pass",
+              "InputPath": "$.b",
+              "End": true
+            }
+          }
+        }
+      ],
+      "Next": "Step two"
+    },
+    "Step two": {
+      "Type": "Succeed"
+    }
+  }
+}
