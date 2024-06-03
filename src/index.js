@@ -1,11 +1,8 @@
-import { getValue, setValue } from './util';
+import { getValue, applyPayloadTemplate, getStateResult } from './utils';
 import runChoice from './choice';
 import runTask from './task';
 
 // TODO error types
-// TODO intrinsic functions
-// TODO parameters
-// TODO resultselector
 // TODO retry, catch
 
 const load = (definition, resources = [], options = {}) => {
@@ -26,7 +23,7 @@ const execute = async (definition, context, input) => {
       throw new Error('Failed');
     }
 
-    const stateInput = getValue(rawInput, state.InputPath || '$');
+    const stateInput = getValue(rawInput, state.InputPath);
     let stateResult = {};
 
     if (state.Type === 'Succeed') {
@@ -36,25 +33,33 @@ const execute = async (definition, context, input) => {
     if (state.Type === 'Choice') {
       const next = runChoice(state, context, stateInput);
 
-      rawInput = getValue(stateInput, state.OutputPath || '$');
+      rawInput = getValue(stateInput, state.OutputPath);
       state = definition.States[next];
       continue;
     }
 
     if (state.Type === 'Parallel') {
-      const branches = state.Branches.map((branch) => execute(branch, context, stateInput));
-      stateResult = await Promise.all(branches);
+      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      stateResult = applyResultPath(rawInput, stateResult, state.ResultPath);
+      const branches = state.Branches.map((branch) => execute(branch, context, effectiveInput));
+      const result = await Promise.all(branches);
+
+      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+
+      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
 
     if (state.Type === 'Map') {
-      const items = jq.value(stateInput, state.ItemsPath || '$');
+      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
+
+      const items = jq.value(effectiveInput, state.ItemsPath);
 
       const executions = items.map((item) => execute(state.ItemProcessor, context, item));
-      stateResult = await Promise.all(executions);
+      const result = await Promise.all(executions);
 
-      stateResult = applyResultPath(rawInput, stateResult, state.ResultPath);
+      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+
+      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
 
     if (state.Type === 'Wait') {
@@ -67,18 +72,22 @@ const execute = async (definition, context, input) => {
     }
 
     if (state.Type === 'Task') {
-      stateResult = await runTask(state, context, stateInput);
+      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      stateResult = applyResultPath(rawInput, stateResult, state.ResultPath);
+      const result = await runTask(state, context, effectiveInput);
+
+      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+
+      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
 
     if (state.Type === 'Pass') {
-      stateResult = stateInput;
+      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      stateResult = applyResultPath(rawInput, stateResult, state.ResultPath);
+      stateResult = getStateResult(rawInput, effectiveInput, state.ResultPath);
     }
 
-    const stateOutput = getValue(stateResult, state.OutputPath || '$');
+    const stateOutput = getValue(stateResult, state.OutputPath);
 
     if (state.End || state.Type === 'Succeed') {
       return stateOutput;
@@ -87,19 +96,6 @@ const execute = async (definition, context, input) => {
     rawInput = stateOutput;
     state = definition.States[state.Next];
   }
-};
-
-const applyResultPath = (rawInput, stateResult, resultPath) => {
-  let input = { ...rawInput };
-  
-  if (resultPath !== null) {
-    if (resultPath) {
-      setValue(input, resultPath, stateResult);
-    } else {
-      input = stateResult;
-    }
-  }
-  return input;
 };
 
 export {

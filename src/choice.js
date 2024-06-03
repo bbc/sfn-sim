@@ -1,4 +1,4 @@
-import { getValue } from './util';
+import { getValue } from './utils';
 
 const runChoice = (state, _context, input) => {
   for (const choice of state.Choices) {

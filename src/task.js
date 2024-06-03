@@ -8,7 +8,7 @@ const runTask = async (state, context, input) => {
 
   if (state.Resource.startsWith('arn:aws:states:::aws-sdk:s3:')) {
     const action = state.Resource.split(':').pop();
-    return runS3Task(state.Parameters, action, resources, input);
+    return runS3Task(action, resources, input);
   }
 
   throw new Error(`unsupported resource [${state.Resource}]`);
@@ -24,19 +24,21 @@ const runLambdaTask = async (functionName, resources, input) => {
   return resource.function(input);
 };
 
-const runS3Task = (parameters, action, resources, input) => {
-  const { Bucket, Key } = parameters;
+const runS3Task = (action, resources, input) => {
+  const { Bucket, Key, Body } = input;
 
   const resource = resources.find(({ service, name }) => service === 's3' && name === Bucket);
 
   if (action === 'getObject') {
-    return resource.objects.find((object) => object.key === Key)?.body;
+    return {
+      Body: resource.objects.find((object) => object.key === Key)?.body,
+    };
   }
 
   if (action === 'putObject') {
     resource.objects.push({
       key: Key,
-      body: JSON.stringify(input),
+      body: JSON.stringify(Body),
     });
     return input;
   }
