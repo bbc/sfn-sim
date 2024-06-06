@@ -31,6 +31,9 @@ See below for details on these parameters.
 This must be a JSON object which is the `Definition` property of a state machine, which contains the
 `StartAt` and `States` fields at its root.
 
+By default, your definition will be validated using [statelint](https://github.com/wmfs/statelint);
+this can be disabled with the `validateDefinition` option set to `false`.
+
 Note that CloudFormation functions and refs are not supported; you should replace these in your
 definition before loading it.
 
