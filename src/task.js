@@ -1,8 +1,10 @@
+import { TaskFailedError } from './errors';
+
 const runTask = async (state, context, input) => {
   const { resources } = context;
 
-  if (state.Resource.startsWith('arn:aws:states:::lambda:')) {
-    const functionName = state.Resource.replace('arn:aws:states:::lambda:', '').split(':')[0];
+  if (state.Resource.startsWith('arn:aws:lambda:')) {
+    const functionName = state.Resource.split(':')[6];
     return runLambdaTask(functionName, resources, input);
   }
 
@@ -11,17 +13,21 @@ const runTask = async (state, context, input) => {
     return runS3Task(action, resources, input);
   }
 
-  throw new Error(`unsupported resource [${state.Resource}]`);
+  throw new TaskFailedError(`Unsupported resource [${state.Resource}]`);
 };
 
 const runLambdaTask = async (functionName, resources, input) => {
   const resource = resources.find(({ service, name }) => service === 'lambda' && name === functionName);
 
   if (!resource) {
-    throw new Error(`lambda resource [${functionName}] not found`);
+    throw new TaskFailedError(`Lambda function [${functionName}] not found`);
   }
 
-  return resource.function(input);
+  try {
+    return resource.function(input);
+  } catch (error) {
+    throw new TaskFailedError(error);
+  }
 };
 
 const runS3Task = (action, resources, input) => {
@@ -29,16 +35,26 @@ const runS3Task = (action, resources, input) => {
 
   const resource = resources.find(({ service, name }) => service === 's3' && name === Bucket);
 
+  if (!resource) {
+    throw new TaskFailedError(`Bucket [${Bucket}] not found`);
+  }
+
   if (action === 'getObject') {
+    const object = resource.objects.find((object) => object.key === Key);
+
+    if (!object) {
+      throw new TaskFailedError(`No object in bucket [${Bucket}] with key [${Key}]`);
+    }
+
     return {
-      Body: resource.objects.find((object) => object.key === Key)?.body,
+      Body: object.body,
     };
   }
 
   if (action === 'putObject') {
     resource.objects.push({
       key: Key,
-      body: JSON.stringify(Body),
+      body: Body,
     });
     return input;
   }

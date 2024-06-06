@@ -1,3 +1,4 @@
+import { NoChoiceMatchedError, RuntimeError } from './errors';
 import { getValue } from './utils';
 
 const runChoice = (state, _context, input) => {
@@ -11,11 +12,12 @@ const runChoice = (state, _context, input) => {
     return state.Default;
   }
 
-  throw new Error('States.NoChoiceMatched error');
+  throw new NoChoiceMatchedError();
 };
 
 const evaluateChoiceRule = (choice, input) => {
   // TODO assert comparison types match
+
   if (choice.Not) {
     return !evaluateChoiceRule(choice.Not, input);
   }
@@ -86,7 +88,7 @@ const evaluateChoiceRule = (choice, input) => {
   if (choice.StringMatches) {
     throw new Error('unimplemented');
   }
-  throw new Error('choice does not contain a data-test expression');
+  throw new RuntimeError('Choice does not contain a data-test expression');
 };
 
 export default runChoice;

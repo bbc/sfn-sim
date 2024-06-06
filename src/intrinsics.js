@@ -1,3 +1,4 @@
+import { IntrinsicFailureError } from './errors';
 import { getValue } from './utils';
 
 const applyFunction = (input, functionString) => {
@@ -21,6 +22,8 @@ const applyFunction = (input, functionString) => {
         return getValue(input, path);
       });
   }
+
+  throw new IntrinsicFailureError();
 };
 
 export {

@@ -9,7 +9,7 @@ const getValue = (obj, path = '$') => {
   return jp.value(obj, jpPath);
 };
 
-const setValue = (obj, path = '$', newValue) => {
+const setValue = (obj, path, newValue) => {
   const jpPath = path.replace(/\.\[/g, '[');
   return jp.value(obj, jpPath, newValue);
 };

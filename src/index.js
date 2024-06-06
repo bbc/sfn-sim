@@ -1,11 +1,26 @@
-import { getValue, applyPayloadTemplate, getStateResult } from './utils';
+import { StateLint } from '@wmfs/statelint';
 import runChoice from './choice';
+import { ValidationError, RuntimeError, FailError } from './errors';
+import { defaultOptions } from './options';
 import runTask from './task';
+import { getValue, applyPayloadTemplate, getStateResult } from './utils';
 
-// TODO error types
-// TODO retry, catch
+const load = (definition, resources = [], overrideOptions = {}) => {
+  const options = {
+    ...defaultOptions,
+    ...overrideOptions,
+  };
 
-const load = (definition, resources = [], options = {}) => {
+  if (options.validateDefinition) {
+    const stateLint = new StateLint();
+    const problems = stateLint.validate(definition);
+  
+    if (problems.length) {
+      const message = problems.join('\n');
+      throw new ValidationError(message);
+    }
+  }
+
   const context = { resources, options };
 
   return {
@@ -17,10 +32,12 @@ const execute = async (definition, context, input) => {
   let rawInput = input || {};
   let state = definition.States[definition.StartAt];
 
-  
   while (true) {
     if (state.Type === 'Fail') {
-      throw new Error('Failed');
+      const error = state.Error || (state.ErrorPath ? getValue(rawInput, state.ErrorPath) : null);
+      const cause = state.Cause || (state.CausePath ? getValue(rawInput, state.CausePath) : null);
+
+      throw new FailError(error, cause);
     }
 
     const stateInput = getValue(rawInput, state.InputPath);
@@ -52,7 +69,7 @@ const execute = async (definition, context, input) => {
     if (state.Type === 'Map') {
       const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      const items = jq.value(effectiveInput, state.ItemsPath);
+      const items = getValue(effectiveInput, state.ItemsPath);
 
       const executions = items.map((item) => execute(state.ItemProcessor, context, item));
       const result = await Promise.all(executions);
@@ -63,7 +80,13 @@ const execute = async (definition, context, input) => {
     }
 
     if (state.Type === 'Wait') {
-      if (options.simulateWait) {
+      const seconds = state.Seconds || (state.SecondsPath ? getValue(stateInput, state.SecondsPath) : null);
+
+      if (!seconds) {
+        throw new RuntimeError('Could not resolve value of Seconds or SecondsPath in Wait step');
+      }
+
+      if (context.options.simulateWait) {
         const duration = state.Seconds * 1000;
         await new Promise(resolve => setTimeout(resolve, duration));
       }
