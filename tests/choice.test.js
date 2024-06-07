@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
-import runChoice from '../src/choice';
-import { NoChoiceMatchedError } from '../src/errors';
+import runChoice from '../src/choice.js';
+import { NoChoiceMatchedError } from '../src/errors.js';
 
 test('returns a matched step from the given Choices', () => {
   const state = {

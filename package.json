@@ -1,6 +1,6 @@
 {
   "name": "sfn-sim",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "AWS Step Function simulator for unit testing state machines",
   "keywords": ["aws", "step-functions", "state-machine", "testing"],
   "author": "Ben Wormald <ben.wormald@bbc.co.uk>",

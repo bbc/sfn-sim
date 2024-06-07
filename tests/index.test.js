@@ -1,6 +1,6 @@
 import { vi, test, expect } from 'vitest';
-import { FailError, ValidationError } from '../src/errors';
-import { load } from '../src/index';
+import { FailError, ValidationError } from '../src/errors.js';
+import { load } from '../src/index.js';
 
 test('executes a Pass step', async () => {
   const definition = {

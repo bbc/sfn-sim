@@ -1,9 +1,9 @@
 import { StateLint } from '@wmfs/statelint';
-import runChoice from './choice';
-import { ValidationError, RuntimeError, FailError } from './errors';
-import { defaultOptions } from './options';
-import runTask from './task';
-import { getValue, applyPayloadTemplate, getStateResult } from './utils';
+import runChoice from './choice.js';
+import { ValidationError, RuntimeError, FailError } from './errors.js';
+import { defaultOptions } from './options.js';
+import runTask from './task.js';
+import { getValue, applyPayloadTemplate, getStateResult } from './utils.js';
 
 const load = (definition, resources = [], overrideOptions = {}) => {
   const options = {

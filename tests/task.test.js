@@ -1,6 +1,6 @@
 import { vi, test, expect, describe } from 'vitest';
-import { TaskFailedError } from '../src/errors';
-import runTask from '../src/task';
+import { TaskFailedError } from '../src/errors.js';
+import runTask from '../src/task.js';
 
 describe('lambda', () => {
   const state = {

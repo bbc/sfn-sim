@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { applyPayloadTemplate, getStateResult, getValue, setValue } from '../src/utils';
+import { applyPayloadTemplate, getStateResult, getValue, setValue } from '../src/utils.js';
 
 describe('getValue', () => {
   test('gets a value from an object', () => {

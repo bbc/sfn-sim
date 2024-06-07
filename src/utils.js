@@ -1,5 +1,5 @@
 import jp from 'jsonpath';
-import { applyFunction } from './intrinsics';
+import { applyFunction } from './intrinsics.js';
 
 const getValue = (obj, path = '$') => {
   if (typeof obj !== 'object' && (!path || path === '$')) {

@@ -1,5 +1,5 @@
-import { IntrinsicFailureError } from './errors';
-import { getValue } from './utils';
+import { IntrinsicFailureError } from './errors.js';
+import { getValue } from './utils.js';
 
 const applyFunction = (input, functionString) => {
   if (functionString.startsWith('States.StringToJson')) {

@@ -1,6 +1,6 @@
 import { test, expect } from 'vitest';
-import { IntrinsicFailureError } from '../src/errors';
-import { applyFunction } from '../src/intrinsics';
+import { IntrinsicFailureError } from '../src/errors.js';
+import { applyFunction } from '../src/intrinsics.js';
 
 test('applies the States.StringToJson function', () => {
   const input = {

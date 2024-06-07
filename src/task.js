@@ -1,4 +1,4 @@
-import { TaskFailedError } from './errors';
+import { TaskFailedError } from './errors.js';
 
 const runTask = async (state, context, input) => {
   const { resources } = context;

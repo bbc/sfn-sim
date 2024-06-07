@@ -1,5 +1,5 @@
-import { NoChoiceMatchedError, RuntimeError } from './errors';
-import { getValue } from './utils';
+import { NoChoiceMatchedError, RuntimeError } from './errors.js';
+import { getValue } from './utils.js';
 
 const runChoice = (state, _context, input) => {
   for (const choice of state.Choices) {
