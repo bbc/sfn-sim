@@ -1,4 +1,4 @@
-import { NoChoiceMatchedError, RuntimeError } from './errors.js';
+import { NoChoiceMatchedError, RuntimeError, SimulatorError } from './errors.js';
 import { getValue } from './utils.js';
 
 const runChoice = (state, _context, input) => {
@@ -83,10 +83,10 @@ const evaluateChoiceRule = (choice, input) => {
     return typeof getValue(input, choice.Variable) === 'boolean';
   }
   if (choice.IsTimestamp) {
-    throw new Error('unimplemented');
+    throw new SimulatorError('IsTimestamp data-test expression unimplemented');
   }
   if (choice.StringMatches) {
-    throw new Error('unimplemented');
+    throw new SimulatorError('StringMatches data-test expression unimplemented');
   }
   throw new RuntimeError('Choice does not contain a data-test expression');
 };
