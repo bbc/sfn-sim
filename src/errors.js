@@ -69,8 +69,8 @@ class NoChoiceMatchedError extends RuntimeError {
 }
 
 class IntrinsicFailureError extends RuntimeError {
-  constructor() {
-    super('Within a Payload Template, the attempt to invoke an Intrinsic Function failed.');
+  constructor(error) {
+    super(`Within a Payload Template, the attempt to invoke an Intrinsic Function failed.\n${error}`);
     this.name = 'States.IntrinsicFailure';
   }
 }

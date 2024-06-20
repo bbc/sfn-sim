@@ -23,7 +23,7 @@ const runTask = async (state, context, input) => {
     return runSqsTask(action, resources, input);
   }
 
-  throw new SimulatorError(`Unsupported resource [${state.Resource}]`);
+  throw new SimulatorError(`Unimplemented resource [${state.Resource}]`);
 };
 
 const runLambdaTask = async (functionName, resources, input) => {
@@ -69,7 +69,7 @@ const runS3Task = (action, resources, input) => {
     return input;
   }
 
-  throw new SimulatorError(`Unsupported action [${action}] for service [s3]`);
+  throw new SimulatorError(`Unimplemented action [${action}] for service [s3]`);
 };
 
 const runSnsTask = (action, resources, input) => {
@@ -87,7 +87,7 @@ const runSnsTask = (action, resources, input) => {
     return input;
   }
 
-  throw new SimulatorError(`Unsupported action [${action}] for service [sns]`);
+  throw new SimulatorError(`Unimplemented action [${action}] for service [sns]`);
 };
 
 const runSqsTask = (action, resources, input) => {
@@ -105,7 +105,7 @@ const runSqsTask = (action, resources, input) => {
     return input;
   }
 
-  throw new SimulatorError(`Unsupported action [${action}] for service [sqs]`);
+  throw new SimulatorError(`Unimplemented action [${action}] for service [sqs]`);
 };
 
 export default runTask;

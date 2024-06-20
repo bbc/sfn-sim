@@ -244,7 +244,7 @@ describe('s3', () => {
       Bucket: 'my-bucket',
     };
 
-    const expectedError = new SimulatorError('Unsupported action [fillBucket] for service [s3]');
+    const expectedError = new SimulatorError('Unimplemented action [fillBucket] for service [s3]');
 
     await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
   });
@@ -329,7 +329,7 @@ describe('sns', () => {
       TopicArn: 'arn:aws:sns:eu-west-1:012345678901:my-topic',
     };
 
-    const expectedError = new SimulatorError('Unsupported action [unpublish] for service [sns]');
+    const expectedError = new SimulatorError('Unimplemented action [unpublish] for service [sns]');
 
     await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
   });
@@ -414,13 +414,13 @@ describe('sqs', () => {
       QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
     };
 
-    const expectedError = new SimulatorError('Unsupported action [unsendMessage] for service [sqs]');
+    const expectedError = new SimulatorError('Unimplemented action [unsendMessage] for service [sqs]');
 
     await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
   });
 });
 
-test('throws a SimulatorError error if an unsupported resource is specified', async () => {
+test('throws a SimulatorError error if an unimplemented resource is specified', async () => {
   const state = {
     Type: 'Task',
     Resource: 'arn:aws:bananas:::banana:🍌',
@@ -431,7 +431,7 @@ test('throws a SimulatorError error if an unsupported resource is specified', as
     resources: [],
   };
 
-  const expectedError = new SimulatorError('Unsupported resource [arn:aws:bananas:::banana:🍌]');
+  const expectedError = new SimulatorError('Unimplemented resource [arn:aws:bananas:::banana:🍌]');
 
   await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
 });

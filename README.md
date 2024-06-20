@@ -142,8 +142,7 @@ This library is currently a work-in-progress and does not support every feature 
 Some functionality yet to be implemented:
 
 * `Retry` and `Catch` fields
-* Most AWS resources in `Task` steps
-* Most intrinstic functions
+* Some AWS resources in `Task` steps
 * Some data-test expressions in `Choice` steps
 * Some runtime error handling and data validation
 
