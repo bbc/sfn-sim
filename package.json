@@ -1,7 +1,7 @@
 {
   "name": "sfn-sim",
   "version": "0.3.0",
-  "description": "AWS Step Function simulator for unit testing state machines",
+  "description": "AWS Step Functions simulator for unit testing state machines",
   "keywords": [
     "aws",
     "step-functions",
