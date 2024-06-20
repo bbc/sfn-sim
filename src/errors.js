@@ -5,6 +5,13 @@ class ValidationError extends Error {
   }
 }
 
+class SimulatorError extends Error {
+  constructor(message) {
+    super(message);
+    this.name = 'SimulatorError';
+  }
+}
+
 class RuntimeError extends Error {
   constructor(message) {
     super(message);
@@ -91,6 +98,7 @@ class ResultWriterFailedError extends RuntimeError {
 
 export {
   ValidationError,
+  SimulatorError,
   RuntimeError,
   FailError,
   TaskFailedError,

@@ -1,6 +1,6 @@
 {
   "name": "sfn-sim",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "AWS Step Function simulator for unit testing state machines",
   "keywords": ["aws", "step-functions", "state-machine", "testing"],
   "author": "Ben Wormald <ben.wormald@bbc.co.uk>",
@@ -9,7 +9,8 @@
   "main": "src/index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@wmfs/statelint": "^1.24.0",

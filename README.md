@@ -44,19 +44,30 @@ This should be an array of objects which are AWS resources used by any `Task` st
 machine. Each object must contain `service` and `name` fields, and additional fields depending on
 the service.
 
-The supported `service` values are `lambda` and `s3`. See below for details and an example test.
+The supported `service` values are listed below with their requirements, as well as an example using
+the Lambda and S3 services.
 
 
 ### `lambda`
 
-This resource should contain a `function` field which must be a function. This will be executed as
+This resource must contain a `function` field which must be a function. This will be executed as
 your lambda handler.
 
 
 ### `s3`
 
-This resource should contain an `objects` field which must be an array. This can optionally be
+This resource must contain an `objects` field which must be an array. This can optionally be
 pre-populated with objects, which must contain `key` and `body` fields.
+
+
+### `sns`
+
+This resource must contain a `messages` field which must be an array.
+
+
+### `sqs`
+
+This resource must contain a `messages` field which must be an array.
 
 
 ### Resources example

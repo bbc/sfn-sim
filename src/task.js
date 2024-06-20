@@ -1,4 +1,4 @@
-import { TaskFailedError } from './errors.js';
+import { TaskFailedError, SimulatorError } from './errors.js';
 
 const runTask = async (state, context, input) => {
   const { resources } = context;
@@ -13,7 +13,17 @@ const runTask = async (state, context, input) => {
     return runS3Task(action, resources, input);
   }
 
-  throw new TaskFailedError(`Unsupported resource [${state.Resource}]`);
+  if (state.Resource.startsWith('arn:aws:states:::sns:')) {
+    const action = state.Resource.split(':').pop();
+    return runSnsTask(action, resources, input);
+  }
+
+  if (state.Resource.startsWith('arn:aws:states:::sqs:')) {
+    const action = state.Resource.split(':').pop();
+    return runSqsTask(action, resources, input);
+  }
+
+  throw new SimulatorError(`Unsupported resource [${state.Resource}]`);
 };
 
 const runLambdaTask = async (functionName, resources, input) => {
@@ -36,7 +46,7 @@ const runS3Task = (action, resources, input) => {
   const resource = resources.find(({ service, name }) => service === 's3' && name === Bucket);
 
   if (!resource) {
-    throw new TaskFailedError(`Bucket [${Bucket}] not found`);
+    throw new TaskFailedError(`S3 bucket [${Bucket}] not found`);
   }
 
   if (action === 'getObject') {
@@ -58,6 +68,44 @@ const runS3Task = (action, resources, input) => {
     });
     return input;
   }
+
+  throw new SimulatorError(`Unsupported action [${action}] for service [s3]`);
+};
+
+const runSnsTask = (action, resources, input) => {
+  const { TopicArn, Message } = input;
+  const topicName = TopicArn.split(':').pop();
+
+  const resource = resources.find(({ service, name }) => service === 'sns' && name === topicName);
+
+  if (!resource) {
+    throw new TaskFailedError(`SNS topic [${topicName}] not found`);
+  }
+
+  if (action === 'publish') {
+    resource.messages.push(Message);
+    return input;
+  }
+
+  throw new SimulatorError(`Unsupported action [${action}] for service [sns]`);
+};
+
+const runSqsTask = (action, resources, input) => {
+  const { QueueUrl, MessageBody } = input;
+  const queueName = QueueUrl.split('/').pop();
+
+  const resource = resources.find(({ service, name }) => service === 'sqs' && name === queueName);
+
+  if (!resource) {
+    throw new TaskFailedError(`SQS queue [${queueName}] not found`);
+  }
+
+  if (action === 'sendMessage') {
+    resource.messages.push(MessageBody);
+    return input;
+  }
+
+  throw new SimulatorError(`Unsupported action [${action}] for service [sqs]`);
 };
 
 export default runTask;

@@ -1,5 +1,5 @@
 import { vi, test, expect, describe } from 'vitest';
-import { TaskFailedError } from '../src/errors.js';
+import { TaskFailedError, SimulatorError } from '../src/errors.js';
 import runTask from '../src/task.js';
 
 describe('lambda', () => {
@@ -218,13 +218,209 @@ describe('s3', () => {
       Key: 'my-object',
     };
 
-    const expectedError = new TaskFailedError('Bucket [my-bucket] not found');
+    const expectedError = new TaskFailedError('S3 bucket [my-bucket] not found');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+
+  test('throws a SimulatorError error if the action is not supported', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::aws-sdk:s3:fillBucket',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 's3',
+          name: 'my-bucket',
+          objects: [],
+        },
+      ],
+    };
+
+    const input = {
+      Bucket: 'my-bucket',
+    };
+
+    const expectedError = new SimulatorError('Unsupported action [fillBucket] for service [s3]');
 
     await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
   });
 });
 
-test('throws a States.TaskFailed error if an unsupported resource is specified', async () => {
+describe('sns', () => {
+  describe('publish', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sns:publish',
+      End: true,
+    };
+
+    test('publishes a message to a topic', async () => {
+      const messages = [];
+      const context = {
+        resources: [
+          {
+            service: 'sns',
+            name: 'my-topic',
+            messages,
+          },
+        ],
+      };
+
+      const input = {
+        TopicArn: 'arn:aws:sns:eu-west-1:012345678901:my-topic',
+        Message: 'someString',
+      };
+
+      await runTask(state, context, input);
+
+      expect(messages).toContain('someString');
+    });
+  });
+
+  test('throws a State.TaskFailed error if the topic is not found', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sns:publish',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'sns',
+          name: 'some-other-topic',
+          message: [],
+        },
+      ],
+    };
+
+    const input = {
+      TopicArn: 'arn:aws:sns:eu-west-1:012345678901:my-topic',
+      Message: 'someString',
+    };
+
+    const expectedError = new TaskFailedError('SNS topic [my-topic] not found');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+
+  test('throws a SimulatorError error if the action is not supported', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sns:unpublish',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'sns',
+          name: 'my-topic',
+          message: [],
+        },
+      ],
+    };
+
+    const input = {
+      TopicArn: 'arn:aws:sns:eu-west-1:012345678901:my-topic',
+    };
+
+    const expectedError = new SimulatorError('Unsupported action [unpublish] for service [sns]');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+});
+
+describe('sqs', () => {
+  describe('sendMessage', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sqs:sendMessage',
+      End: true,
+    };
+
+    test('sends a message to a queue', async () => {
+      const messages = [];
+      const context = {
+        resources: [
+          {
+            service: 'sqs',
+            name: 'my-queue',
+            messages,
+          },
+        ],
+      };
+
+      const input = {
+        QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
+        MessageBody: 'someString',
+      };
+
+      await runTask(state, context, input);
+
+      expect(messages).toContain('someString');
+    });
+  });
+
+  test('throws a State.TaskFailed error if the queue is not found', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sqs:sendMessage',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'sqs',
+          name: 'some-other-queue',
+          message: [],
+        },
+      ],
+    };
+
+    const input = {
+      QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
+      MessageBody: 'someString',
+    };
+
+    const expectedError = new TaskFailedError('SQS queue [my-queue] not found');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+
+  test('throws a SimulatorError error if the action is not supported', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::sqs:unsendMessage',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'sqs',
+          name: 'my-queue',
+          message: [],
+        },
+      ],
+    };
+
+    const input = {
+      QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
+    };
+
+    const expectedError = new SimulatorError('Unsupported action [unsendMessage] for service [sqs]');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+});
+
+test('throws a SimulatorError error if an unsupported resource is specified', async () => {
   const state = {
     Type: 'Task',
     Resource: 'arn:aws:bananas:::banana:🍌',
@@ -235,7 +431,7 @@ test('throws a States.TaskFailed error if an unsupported resource is specified',
     resources: [],
   };
 
-  const expectedError = new TaskFailedError('Unsupported resource [arn:aws:bananas:::banana:🍌]');
+  const expectedError = new SimulatorError('Unsupported resource [arn:aws:bananas:::banana:🍌]');
 
   await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
 });
