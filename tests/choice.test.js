@@ -65,25 +65,6 @@ describe('runChoice', () => {
 
     expect(() => runChoice(state, {}, input)).toThrowError(NoChoiceMatchedError);
   });
-
-  test('throws a runtime error when choice contains no recognised data-test expression', () => {
-    const state = {
-      Type: 'Choice',
-      Choices: [
-        {
-          StringIsValid: true,
-          Variable: '$.someString',
-          Next: 'MatchedStep',
-        },
-      ],
-    };
-
-    const input = {
-      someString: 'Hello!',
-    };
-
-    expect(() => runChoice(state, {}, input)).toThrowError(RuntimeError);
-  });
 });
 
 describe('evaluateChoiceRule', () => {
@@ -412,8 +393,17 @@ describe('evaluateChoiceRule', () => {
     });
 
     test('returns false', () => {
-      const result = evaluateChoiceRule(choice,{ myString: 'src/choice.js' });
+      const result = evaluateChoiceRule(choice, { myString: 'src/choice.js' });
       expect(result).toBe(false);
     });
+  });
+
+  test('throws a runtime error when choice contains no recognised data-test expression', () => {
+    const choice = {
+      StringIsValid: true,
+      Variable: '$.myString',
+    };
+
+    expect(() => evaluateChoiceRule(choice, { myString: 'hello' })).toThrowError(RuntimeError);
   });
 });
