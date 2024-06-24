@@ -1,3 +1,4 @@
+import { v4 as uuidV4 } from 'uuid';
 import { TaskFailedError, SimulatorError } from './errors.js';
 
 const runTask = async (state, context, input) => {
@@ -21,6 +22,11 @@ const runTask = async (state, context, input) => {
   if (state.Resource.startsWith('arn:aws:states:::sqs:')) {
     const action = state.Resource.split(':').pop();
     return runSqsTask(action, resources, input);
+  }
+
+  if (state.Resource.startsWith('arn:aws:states:::states:')) {
+    const action = state.Resource.split(':')[6];
+    return runStepFunctionsTask(action, resources, input);
   }
 
   throw new SimulatorError(`Unimplemented resource [${state.Resource}]`);
@@ -106,6 +112,72 @@ const runSqsTask = (action, resources, input) => {
   }
 
   throw new SimulatorError(`Unimplemented action [${action}] for service [sqs]`);
+};
+
+const runStepFunctionsTask = async (action, resources, input) => {
+  const { StateMachineArn, Input } = input;
+  const stateMachineName = StateMachineArn.split(':').pop();
+
+  const resource = resources.find(({ service, name }) => service === 'stepFunctions' && name === stateMachineName);
+
+  if (!resource) {
+    throw new TaskFailedError(`State machine [${stateMachineName}] not found`);
+  }
+
+  if (action === 'startExecution.sync') {
+    const executionId = uuidV4();
+    const StartDate = Date.now();
+    let Output;
+
+    try {
+      Output = await resource.stateMachine(Input);
+    } catch (error) {
+      throw new TaskFailedError(error);
+    }
+
+    const StopDate = Date.now();
+
+    return {
+      ExecutionArn: `arn:aws:states:::execution:${stateMachineName}:${executionId}`,
+      Input,
+      InputDetails: {
+        Included: true,
+      },
+      Name: executionId,
+      Output,
+      OutputDetails: {
+        Included: true,
+      },
+      RedriveCount: 0,
+      RedriveStatus: 'NOT_REDRIVABLE',
+      RedriveStatusReason: 'Execution is SUCCEEDED and cannot be redriven',
+      StartDate,
+      StateMachineArn,
+      Status: 'SUCCEEDED',
+      StopDate,
+    };
+  }
+
+  if (action === 'startExecution') {
+    const executionId = uuidV4();
+    const StartDate = Date.now();
+
+    try {
+      resource.stateMachine(Input);
+    } catch (error) {
+      console.debug(error);
+    }
+
+    return {
+      ExecutionArn: `arn:aws:states:::execution:${stateMachineName}:${executionId}`,
+      SdkHttpMetadata: {
+        HttpStatusCode: 200,
+      },
+      StartDate,
+    };
+  }
+
+  throw new SimulatorError(`Unimplemented action [${action}] for service [stepFunctions]`);
 };
 
 export default runTask;

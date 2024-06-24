@@ -70,6 +70,12 @@ This resource must contain a `messages` field which must be an array.
 This resource must contain a `messages` field which must be an array.
 
 
+### `stepFunctions`
+
+This resource must contain a `stateMachine` field which must be a function. This will be executed as
+your state machine.
+
+
 ### Resources example
 
 ```js

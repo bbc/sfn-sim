@@ -1,102 +1,104 @@
 import { vi, test, expect, describe } from 'vitest';
-import { TaskFailedError, SimulatorError } from '../src/errors.js';
+import { TaskFailedError, SimulatorError, RuntimeError } from '../src/errors.js';
 import runTask from '../src/task.js';
 
 describe('lambda', () => {
-  const state = {
-    Type: 'Task',
-    Resource: 'arn:aws:lambda:::function:my-function',
-    End: true,
-  };
-
-  test('runs a function with a function ARN', async () => {
-    const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
-
-    const context = {
-      resources: [
-        {
-          service: 'lambda',
-          name: 'my-function',
-          function: mockFunction,
-        },
-      ],
+  describe('invoke (optimised integration)', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:lambda:::function:my-function',
+      End: true,
     };
 
-    const input = {
-      number: 1,
-    };
+    test('runs a function with a function ARN', async () => {
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-    const result = await runTask(state, context, input);
-
-    expect(mockFunction).toHaveBeenCalledWith(input);
-    expect(result).toEqual({
-      number: 2,
-    });
-  });
-
-  test('runs a function with an alias ARN', async () => {
-    const stateWithAlias = {
-      ...state,
-      Resource: 'arn:aws:lambda:::function:my-function:some-alias',
-    };
-
-    const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
-
-    const context = {
-      resources: [
-        {
-          service: 'lambda',
-          name: 'my-function',
-          function: mockFunction,
-        },
-      ],
-    };
-
-    const input = {
-      number: 1,
-    };
-
-    const result = await runTask(stateWithAlias, context, input);
-
-    expect(mockFunction).toHaveBeenCalledWith(input);
-    expect(result).toEqual({
-      number: 2,
-    });
-  });
-
-  test('throws a States.TaskFailed error if the function is not found', async () => {
-    const context = {
-      resources: [
-        {
-          service: 'lambda',
-          name: 'some-other-function',
-          function: () => { },
-        },
-      ],
-    };
-
-    const expectedError = new TaskFailedError('Lambda function [my-function] not found');
-
-    await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
-  });
-
-  test('throws a States.TaskFailed error if the function throws an error', async () => {
-    const context = {
-      resources: [
-        {
-          service: 'lambda',
-          name: 'my-function',
-          function: () => {
-            throw new Error('Lambda runtime error');
+      const context = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
           },
-        },
-      ],
-    };
+        ],
+      };
 
-    const expectedError = new TaskFailedError('Error: Lambda runtime error');
+      const input = {
+        number: 1,
+      };
 
-    await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
-  });
+      const result = await runTask(state, context, input);
+
+      expect(mockFunction).toHaveBeenCalledWith(input);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+
+    test('runs a function with an alias ARN', async () => {
+      const stateWithAlias = {
+        ...state,
+        Resource: 'arn:aws:lambda:::function:my-function:some-alias',
+      };
+
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+
+      const context = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
+          },
+        ],
+      };
+
+      const input = {
+        number: 1,
+      };
+
+      const result = await runTask(stateWithAlias, context, input);
+
+      expect(mockFunction).toHaveBeenCalledWith(input);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+
+    test('throws a States.TaskFailed error if the function is not found', async () => {
+      const context = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'some-other-function',
+            function: () => { },
+          },
+        ],
+      };
+
+      const expectedError = new TaskFailedError('Lambda function [my-function] not found');
+
+      await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
+    });
+
+    test('throws a States.TaskFailed error if the function throws an error', async () => {
+      const context = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: () => {
+              throw new Error('Lambda runtime error');
+            },
+          },
+        ],
+      };
+
+      const expectedError = new TaskFailedError('Error: Lambda runtime error');
+
+      await expect(() => runTask(state, context, {})).rejects.toThrowError(expectedError);
+    });
+  })
 });
 
 describe('s3', () => {
@@ -415,6 +417,200 @@ describe('sqs', () => {
     };
 
     const expectedError = new SimulatorError('Unimplemented action [unsendMessage] for service [sqs]');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+});
+
+describe('stepFunctions', () => {
+  describe('startExecution (optimised integration)', () => {
+    describe('sync (wait for output)', () => {
+      test('executes a state machine', async () => {
+        const state = {
+          Type: 'Task',
+          Resource: 'arn:aws:states:::states:startExecution.sync:2',
+          End: true,
+        };
+  
+        const mockStateMachine = vi.fn((input) => ({ ...input, resultKey: 'resultValue' }));
+        const context = {
+          resources: [
+            {
+              service: 'stepFunctions',
+              name: 'my-state-machine',
+              stateMachine: mockStateMachine,
+            },
+          ],
+        };
+  
+        const input = {
+          StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+          Input: {
+            someKey: 'someValue',
+          },
+        };
+  
+        const result = await runTask(state, context, input);
+  
+        expect(mockStateMachine).toHaveBeenCalledOnce();
+        expect(result).toEqual(expect.objectContaining({
+          Output: {
+            someKey: 'someValue',
+            resultKey: 'resultValue',
+          },
+          Status: 'SUCCEEDED',
+        }));
+      });
+
+      test('throws a States.TaskFailed error if the state machine fails', async () => {
+        const state = {
+          Type: 'Task',
+          Resource: 'arn:aws:states:::states:startExecution.sync:2',
+          End: true,
+        };
+
+        const mockStateMachine = vi.fn(() => {
+          throw new Error('oh no!');
+        });
+        const context = {
+          resources: [
+            {
+              service: 'stepFunctions',
+              name: 'my-state-machine',
+              stateMachine: mockStateMachine,
+            },
+          ],
+        };
+
+        const input = {
+          StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+          Input: { someKey: 'someValue' },
+        };
+
+        expect(() => runTask(state, context, input)).rejects.toThrow(new RuntimeError(new Error('oh no!')));
+      });
+    });
+
+    describe('async (call and continue)', () => {
+      test('starts execution of a state machine', async () => {
+        const state = {
+          Type: 'Task',
+          Resource: 'arn:aws:states:::states:startExecution',
+          End: true,
+        };
+  
+        const mockStateMachine = vi.fn();
+        const context = {
+          resources: [
+            {
+              service: 'stepFunctions',
+              name: 'my-state-machine',
+              stateMachine: mockStateMachine,
+            },
+          ],
+        };
+  
+        const input = {
+          StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+          Input: { someKey: 'someValue' },
+        };
+  
+        const result = await runTask(state, context, input);
+  
+        expect(mockStateMachine).toHaveBeenCalledOnce();
+        expect(result).toEqual(expect.objectContaining({
+          SdkHttpMetadata: expect.objectContaining({
+            HttpStatusCode: 200,
+          }),
+        }));
+        expect(result.Output).toBeUndefined();
+      });
+
+      test('handles a state machine failing', async () => {
+        vi.spyOn(console, 'debug').mockImplementation(() => {});
+
+        const state = {
+          Type: 'Task',
+          Resource: 'arn:aws:states:::states:startExecution',
+          End: true,
+        };
+
+        const mockStateMachine = vi.fn(() => {
+          throw new Error('oh no!');
+        });
+        const context = {
+          resources: [
+            {
+              service: 'stepFunctions',
+              name: 'my-state-machine',
+              stateMachine: mockStateMachine,
+            },
+          ],
+        };
+
+        const input = {
+          StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+          Input: { someKey: 'someValue' },
+        };
+  
+        const result = await runTask(state, context, input);
+  
+        expect(mockStateMachine).toHaveBeenCalledOnce();
+        expect(result.SdkHttpMetadata.HttpStatusCode).toBe(200);
+      });
+    });
+  });
+
+  test('throws a State.TaskFailed error if the state machine is not found', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::states:startExecution.sync:2',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'stepFunctions',
+          name: 'some-other-state-machine',
+          stateMachine: vi.fn(),
+        },
+      ],
+    };
+
+    const input = {
+      StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+      Input: { someKey: 'someValue' },
+    };
+
+    const expectedError = new TaskFailedError('State machine [my-state-machine] not found');
+
+    await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
+  });
+
+  test('throws a SimulatorError error if the action is not supported', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::states:stopExecution',
+      End: true,
+    };
+
+    const context = {
+      resources: [
+        {
+          service: 'stepFunctions',
+          name: 'my-state-machine',
+          stateMachine: vi.fn(),
+        },
+      ],
+    };
+
+    const input = {
+      StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
+      Input: { someKey: 'someValue' },
+    };
+
+    const expectedError = new SimulatorError('Unimplemented action [stopExecution] for service [stepFunctions]');
 
     await expect(() => runTask(state, context, input)).rejects.toThrowError(expectedError);
   });
