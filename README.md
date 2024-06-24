@@ -1,6 +1,6 @@
 # sfn-sim: Step Function simulator
 
-This library simulates the AWS Step Function runtime to unit test state machines, a lightweight
+This library simulates the AWS Step Functions runtime to unit test state machines, a lightweight
 alternative to integration testing with LocalStack.
 
 
