@@ -16,8 +16,6 @@ const runChoice = (state, _context, input) => {
 };
 
 const evaluateChoiceRule = (choice, input) => {
-  // TODO assert comparison types match
-
   if (choice.Not) {
     return !evaluateChoiceRule(choice.Not, input);
   }
