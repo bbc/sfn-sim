@@ -487,7 +487,7 @@ describe('stepFunctions', () => {
           Input: { someKey: 'someValue' },
         };
 
-        expect(() => runTask(state, context, input)).rejects.toThrow(new RuntimeError(new Error('oh no!')));
+        expect(() => runTask(state, context, input)).rejects.toThrowError(TaskFailedError);
       });
     });
 
