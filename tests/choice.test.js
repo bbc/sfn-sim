@@ -1,6 +1,6 @@
 import { test, expect, describe } from 'vitest';
 import runChoice, { evaluateChoiceRule } from '../src/choice.js';
-import { NoChoiceMatchedError } from '../src/errors.js';
+import { NoChoiceMatchedError, RuntimeError } from '../src/errors.js';
 
 describe('runChoice', () => {
   test('returns a matched step from the given Choices', () => {
@@ -64,6 +64,25 @@ describe('runChoice', () => {
     };
 
     expect(() => runChoice(state, {}, input)).toThrowError(NoChoiceMatchedError);
+  });
+
+  test('throws a runtime error when choice contains no recognised data-test expression', () => {
+    const state = {
+      Type: 'Choice',
+      Choices: [
+        {
+          StringIsValid: true,
+          Variable: '$.someString',
+          Next: 'MatchedStep',
+        },
+      ],
+    };
+
+    const input = {
+      someString: 'Hello!',
+    };
+
+    expect(() => runChoice(state, {}, input)).toThrowError(RuntimeError);
   });
 });
 
