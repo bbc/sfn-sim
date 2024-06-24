@@ -149,7 +149,6 @@ Some functionality yet to be implemented:
 
 * `Retry` and `Catch` fields
 * Some AWS resources in `Task` steps
-* Some data-test expressions in `Choice` steps
 * Some runtime error handling and data validation
 
 `Map` steps are not currently supported by the validation library, so definitions containing these
