@@ -107,7 +107,9 @@ const execute = async (definition, context, input) => {
     if (state.Type === 'Pass') {
       const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      stateResult = getStateResult(rawInput, effectiveInput, state.ResultPath);
+      const result = state.Result || effectiveInput;
+
+      stateResult = getStateResult(rawInput, result, state.ResultPath);
     }
 
     const stateOutput = getValue(stateResult, state.OutputPath);

@@ -1,22 +1,44 @@
-import { vi, test, expect } from 'vitest';
+import { vi, describe, test, expect } from 'vitest';
 import { FailError, ValidationError } from '../src/errors.js';
 import { load } from '../src/index.js';
 
-test('executes a Pass step', async () => {
-  const definition = {
-    StartAt: 'PassStep',
-    States: {
-      PassStep: {
-        Type: 'Pass',
-        End: true,
+describe('Pass', () => {
+  test('returns given input if no Result specified', async () => {
+    const definition = {
+      StartAt: 'PassStep',
+      States: {
+        PassStep: {
+          Type: 'Pass',
+          End: true,
+        },
       },
-    },
-  };
+    };
+  
+    const stateMachine = load(definition);
+    const result = await stateMachine.execute({ someString: 'hello' });
+  
+    expect(result).toEqual({ someString: 'hello' });
+  });
 
-  const stateMachine = load(definition);
-  const result = await stateMachine.execute({ someString: 'hello' });
-
-  expect(result).toEqual({ someString: 'hello' });
+  test('returns Result if specified', async () => {
+    const definition = {
+      StartAt: 'PassStep',
+      States: {
+        PassStep: {
+          Type: 'Pass',
+          Result: {
+            someString: 'hello',
+          },
+          End: true,
+        },
+      },
+    };
+  
+    const stateMachine = load(definition);
+    const result = await stateMachine.execute({ someOtherString: 'goodbye' });
+  
+    expect(result).toEqual({ someString: 'hello' });
+  });
 });
 
 test('executes a Task step', async () => {
