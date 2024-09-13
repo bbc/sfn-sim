@@ -1,4 +1,5 @@
 import { StateLint } from '@wmfs/statelint';
+import { v4 as uuidV4 } from 'uuid';
 import runChoice from './choice.js';
 import { ValidationError, RuntimeError, FailError } from './errors.js';
 import { defaultOptions } from './options.js';
@@ -6,9 +7,11 @@ import runTask from './task.js';
 import { getValue, applyPayloadTemplate, getStateResult } from './utils.js';
 
 const load = (definition, resources = [], overrideOptions = {}) => {
+  const { executionName, stateMachineName, ...otherOverrideOptions } = overrideOptions;
+
   const options = {
     ...defaultOptions,
-    ...overrideOptions,
+    ...otherOverrideOptions,
   };
 
   if (options.validateDefinition) {
@@ -21,18 +24,38 @@ const load = (definition, resources = [], overrideOptions = {}) => {
     }
   }
 
-  const context = { resources, options };
-
   return {
-    execute: (input) => execute(definition, context, input),
+    execute: (Input) => {
+      const context = {
+        Execution: {
+          Id: uuidV4(),
+          Input,
+          Name: executionName,
+          StartTime: new Date().toISOString(),
+        },
+        State: {
+          Name: definition.StartAt,
+        },
+        StateMachine: {
+          Id: uuidV4(),
+          Name: stateMachineName,
+        },
+        Task: {},
+      };
+
+      const data = { resources, options, context };
+
+      return execute(definition, data);
+    },
   };
 };
 
-const execute = async (definition, context, input) => {
-  let rawInput = input || {};
-  let state = definition.States[definition.StartAt];
+const execute = async (definition, data) => {
+  let rawInput = data.context.Execution.Input || {};
 
   while (true) {
+    const state = definition.States[data.context.State.Name];
+
     if (state.Type === 'Fail') {
       const error = state.Error || (state.ErrorPath ? getValue(rawInput, state.ErrorPath) : null);
       const cause = state.Cause || (state.CausePath ? getValue(rawInput, state.CausePath) : null);
@@ -48,17 +71,18 @@ const execute = async (definition, context, input) => {
     }
 
     if (state.Type === 'Choice') {
-      const next = runChoice(state, context, stateInput);
+      const next = runChoice(state, data, stateInput);
 
       rawInput = getValue(stateInput, state.OutputPath);
-      state = definition.States[next];
+      data.context.State.Name = next;
       continue;
     }
 
     if (state.Type === 'Parallel') {
       const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      const branches = state.Branches.map((branch) => execute(branch, context, effectiveInput));
+      // TODO https://docs.aws.amazon.com/step-functions/latest/dg/input-output-contextobject.html#contextobject-map
+      const branches = state.Branches.map((branch) => execute(branch, data, effectiveInput));
       const result = await Promise.all(branches);
 
       const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
@@ -67,11 +91,12 @@ const execute = async (definition, context, input) => {
     }
 
     if (state.Type === 'Map') {
+      data.context
       const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
       const items = getValue(effectiveInput, state.ItemsPath);
 
-      const executions = items.map((item) => execute(state.ItemProcessor, context, item));
+      const executions = items.map((item) => execute(state.ItemProcessor, data, item));
       const result = await Promise.all(executions);
 
       const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
@@ -86,7 +111,7 @@ const execute = async (definition, context, input) => {
         throw new RuntimeError('Could not resolve value of Seconds or SecondsPath in Wait step');
       }
 
-      if (context.options.simulateWait) {
+      if (data.options.simulateWait) {
         const duration = state.Seconds * 1000;
         await new Promise(resolve => setTimeout(resolve, duration));
       }
@@ -97,7 +122,7 @@ const execute = async (definition, context, input) => {
     if (state.Type === 'Task') {
       const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
 
-      const result = await runTask(state, context, effectiveInput);
+      const result = await runTask(state, data, effectiveInput);
 
       const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
 
@@ -119,7 +144,7 @@ const execute = async (definition, context, input) => {
     }
 
     rawInput = stateOutput;
-    state = definition.States[state.Next];
+    data.context.State.Name = state.Next;
   }
 };
 
