@@ -140,6 +140,8 @@ This should be an object which can be used to override the default configuration
 | --- | ----------- | ------- |
 | `validateDefinition` | Whether the provided definition should be validated on `load` | `true` |
 | `simulateWait` | Whether any `Wait` steps should wait in real-time, otherwise passing immediately | `false` |
+| `stateMachineName` | Identifier for the state machine, passed to the context object | `undefined` |
+| `executionName` | Identifier for the execution, passed to the context object | `undefined` |
 
 
 ## Notes
