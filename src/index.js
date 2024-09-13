@@ -108,7 +108,6 @@ const execute = async (definition, data) => {
     }
 
     if (state.Type === 'Map') {
-      data.context
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
       const items = getValue(effectiveInput, state.ItemsPath);
