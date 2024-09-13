@@ -164,9 +164,9 @@ test('applies the States.JsonMerge function', () => {
 });
 
 test('applies the States.MathRandom function', () => {
-  const result = applyFunction({}, 'States.MathRandom(1, 999, hello)');
+  const result = applyFunction({}, 'States.MathRandom(1, 999, seed123)');
 
-  expect(result).toEqual(546);
+  expect(result).toEqual(795);
 });
 
 test('applies the States.MathAdd function', () => {

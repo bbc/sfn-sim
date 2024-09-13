@@ -46,16 +46,25 @@ describe('applyPayloadTemplate', () => {
       someObjectString: '{ "someKey": "someValue" }',
     };
 
+    const data = {
+      context: {
+        StateMachine: {
+          Name: 'cool-state-machine',
+        },
+      },
+    };
+
     const payloadTemplate = {
       static: 'staticValue',
       'inputOne.$': '$.one',
       nested: {
         'inputTwo.$': '$.two',
       },
+      'context.$': '$$.StateMachine.Name',
       'intrinsic.$': 'States.StringToJson($.someObjectString)',
     };
 
-    const result = applyPayloadTemplate(input, payloadTemplate);
+    const result = applyPayloadTemplate(input, data, payloadTemplate);
 
     expect(result).toEqual({
       static: 'staticValue',
@@ -63,6 +72,7 @@ describe('applyPayloadTemplate', () => {
       nested: {
         inputTwo: 2,
       },
+      context: 'cool-state-machine',
       intrinsic: {
         someKey: 'someValue',
       },

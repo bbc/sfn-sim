@@ -14,26 +14,28 @@ const setValue = (obj, path, newValue) => {
   return jp.value(obj, jpPath, newValue);
 };
 
-const applyPayloadTemplate = (input, payloadTemplate) => {
+const applyPayloadTemplate = (input, data, payloadTemplate) => {
   if (!payloadTemplate) {
     return input;
   }
 
-  return getPayload(input, payloadTemplate);
+  return getPayload(input, data, payloadTemplate);
 };
 
-const getPayload = (input, payloadTemplate) => {
+const getPayload = (input, data, payloadTemplate) => {
   const payload = {};
 
   for (const key in payloadTemplate) {
     if (typeof payloadTemplate[key] === 'object') {
-      payload[key] = getPayload(input, payloadTemplate[key]);
+      payload[key] = getPayload(input, data, payloadTemplate[key]);
     } else {
       if (key.endsWith('.$')) {
         const payloadKey = key.replace('.$', '');
 
-        if (payloadTemplate[key].startsWith('$')) {
+        if (payloadTemplate[key].startsWith('$.')) {
           payload[payloadKey] = getValue(input, payloadTemplate[key]);
+        } else if (payloadTemplate[key].startsWith('$$.')) {
+          payload[payloadKey] = getValue(data.context, payloadTemplate[key].replace('$$.', '$.'));
         } else {
           payload[payloadKey] = applyFunction(input, payloadTemplate[key]);
         }
