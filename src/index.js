@@ -54,6 +54,7 @@ const execute = async (definition, data) => {
   let rawInput = data.context.Execution.Input || {};
 
   while (true) {
+    data.context.State.EnteredTime = new Date().toISOString();
     const state = definition.States[data.context.State.Name];
 
     if (state.Type === 'Fail') {
@@ -79,27 +80,66 @@ const execute = async (definition, data) => {
     }
 
     if (state.Type === 'Parallel') {
-      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
+      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
-      // TODO https://docs.aws.amazon.com/step-functions/latest/dg/input-output-contextobject.html#contextobject-map
-      const branches = state.Branches.map((branch) => execute(branch, data, effectiveInput));
+      const branches = state.Branches.map((branch) => {
+        const branchData = {
+          ...data,
+          context: {
+            ...data.context,
+            Execution: {
+              ...data.context.Execution,
+              Input: effectiveInput,
+            },
+            State: {
+              ...data.context.State,
+              Name: branch.StartAt,
+            },
+          },
+        };
+
+        return execute(branch, branchData);
+      });
       const result = await Promise.all(branches);
 
-      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
       stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
 
     if (state.Type === 'Map') {
       data.context
-      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
+      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
       const items = getValue(effectiveInput, state.ItemsPath);
 
-      const executions = items.map((item) => execute(state.ItemProcessor, data, item));
+      const executions = items.map((Value, Index) => {
+        const itemData = {
+          ...data,
+          context: {
+            ...data.context,
+            Execution: {
+              ...data.context.Execution,
+              Input: Value,
+            },
+            State: {
+              ...data.context.State,
+              Name: state.ItemProcessor.StartAt,
+            },
+            Map: {
+              Item: {
+                Index,
+                Value,
+              },
+            },
+          },
+        };
+
+        return execute(state.ItemProcessor, itemData);
+      });
       const result = await Promise.all(executions);
 
-      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
       stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
@@ -120,17 +160,17 @@ const execute = async (definition, data) => {
     }
 
     if (state.Type === 'Task') {
-      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
+      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
       const result = await runTask(state, data, effectiveInput);
 
-      const effectiveResult = applyPayloadTemplate(result, state.ResultSelector);
+      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
       stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
     }
 
     if (state.Type === 'Pass') {
-      const effectiveInput = applyPayloadTemplate(stateInput, state.Parameters);
+      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
       const result = state.Result || effectiveInput;
 

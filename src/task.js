@@ -1,8 +1,8 @@
 import { v4 as uuidV4 } from 'uuid';
 import { TaskFailedError, SimulatorError } from './errors.js';
 
-const runTask = async (state, context, input) => {
-  const { resources } = context;
+const runTask = async (state, data, input) => {
+  const { resources } = data;
 
   if (state.Resource.startsWith('arn:aws:lambda:')) {
     const functionName = state.Resource.split(':')[6];
