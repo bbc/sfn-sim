@@ -149,6 +149,6 @@ This should be an object which can be used to override the default configuration
 This library is currently a work-in-progress and does not support every feature of Step Functions.
 Some functionality yet to be implemented:
 
-* `Retry` and `Catch` fields
+* `Retry` fields
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation

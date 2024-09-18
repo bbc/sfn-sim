@@ -17,6 +17,13 @@ class RuntimeError extends Error {
     super(message);
     this.name = 'RuntimeError';
   }
+
+  toErrorOutput() {
+    return {
+      Error: this.name,
+      Cause: this.message,
+    };
+  }
 }
 
 class FailError extends RuntimeError {
@@ -96,6 +103,8 @@ class ResultWriterFailedError extends RuntimeError {
   }
 }
 
+const ERROR_WILDCARD = 'States.ALL';
+
 export {
   ValidationError,
   SimulatorError,
@@ -104,4 +113,5 @@ export {
   TaskFailedError,
   NoChoiceMatchedError,
   IntrinsicFailureError,
+  ERROR_WILDCARD,
 };

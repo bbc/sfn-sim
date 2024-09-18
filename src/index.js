@@ -1,7 +1,7 @@
 import { StateLint } from '@wmfs/statelint';
 import { v4 as uuidV4 } from 'uuid';
 import runChoice from './choice.js';
-import { ValidationError, RuntimeError, FailError } from './errors.js';
+import { ValidationError, RuntimeError, FailError, ERROR_WILDCARD } from './errors.js';
 import { defaultOptions } from './options.js';
 import runTask from './task.js';
 import { getValue, applyPayloadTemplate, getStateResult } from './utils.js';
@@ -17,7 +17,7 @@ const load = (definition, resources = [], overrideOptions = {}) => {
   if (options.validateDefinition) {
     const stateLint = new StateLint();
     const problems = stateLint.validate(definition);
-  
+
     if (problems.length) {
       const message = problems.join('\n');
       throw new ValidationError(message);
@@ -53,7 +53,7 @@ const load = (definition, resources = [], overrideOptions = {}) => {
 const execute = async (definition, data) => {
   let rawInput = data.context.Execution.Input || {};
 
-  while (true) {
+  main: while (true) {
     data.context.State.EnteredTime = new Date().toISOString();
     const state = definition.States[data.context.State.Name];
 
@@ -82,29 +82,43 @@ const execute = async (definition, data) => {
     if (state.Type === 'Parallel') {
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
-      const branches = state.Branches.map((branch) => {
-        const branchData = {
-          ...data,
-          context: {
-            ...data.context,
-            Execution: {
-              ...data.context.Execution,
-              Input: effectiveInput,
+      try {
+        const branches = state.Branches.map((branch) => {
+          const branchData = {
+            ...data,
+            context: {
+              ...data.context,
+              Execution: {
+                ...data.context.Execution,
+                Input: effectiveInput,
+              },
+              State: {
+                ...data.context.State,
+                Name: branch.StartAt,
+              },
             },
-            State: {
-              ...data.context.State,
-              Name: branch.StartAt,
-            },
-          },
-        };
+          };
 
-        return execute(branch, branchData);
-      });
-      const result = await Promise.all(branches);
+          return execute(branch, branchData);
+        });
+        const result = await Promise.all(branches);
 
-      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
+        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
-      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+      } catch (error) {
+        for (const catcher of state?.Catch || []) {
+          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
+            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
+
+            data.context.State.Name = catcher.Next;
+
+            continue main;
+          }
+        }
+
+        throw error;
+      }
     }
 
     if (state.Type === 'Map') {
@@ -112,35 +126,49 @@ const execute = async (definition, data) => {
 
       const items = getValue(effectiveInput, state.ItemsPath);
 
-      const executions = items.map((Value, Index) => {
-        const itemData = {
-          ...data,
-          context: {
-            ...data.context,
-            Execution: {
-              ...data.context.Execution,
-              Input: Value,
-            },
-            State: {
-              ...data.context.State,
-              Name: state.ItemProcessor.StartAt,
-            },
-            Map: {
-              Item: {
-                Index,
-                Value,
+      try {
+        const executions = items.map((Value, Index) => {
+          const itemData = {
+            ...data,
+            context: {
+              ...data.context,
+              Execution: {
+                ...data.context.Execution,
+                Input: Value,
+              },
+              State: {
+                ...data.context.State,
+                Name: state.ItemProcessor.StartAt,
+              },
+              Map: {
+                Item: {
+                  Index,
+                  Value,
+                },
               },
             },
-          },
-        };
+          };
 
-        return execute(state.ItemProcessor, itemData);
-      });
-      const result = await Promise.all(executions);
+          return execute(state.ItemProcessor, itemData);
+        });
+        const result = await Promise.all(executions);
 
-      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
+        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
-      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+      } catch (error) {
+        for (const catcher of state?.Catch || []) {
+          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
+            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
+
+            data.context.State.Name = catcher.Next;
+
+            continue main;
+          }
+        }
+
+        throw error;
+      }
     }
 
     if (state.Type === 'Wait') {
@@ -161,11 +189,25 @@ const execute = async (definition, data) => {
     if (state.Type === 'Task') {
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
-      const result = await runTask(state, data, effectiveInput);
+      try {
+        const result = await runTask(state, data, effectiveInput);
 
-      const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
+        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
-      stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+      } catch (error) {
+        for (const catcher of state?.Catch || []) {
+          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
+            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
+
+            data.context.State.Name = catcher.Next;
+
+            continue main;
+          }
+        }
+
+        throw error;
+      }
     }
 
     if (state.Type === 'Pass') {

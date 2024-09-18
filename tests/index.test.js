@@ -1,5 +1,5 @@
 import { vi, describe, test, expect } from 'vitest';
-import { FailError, ValidationError } from '../src/errors.js';
+import { FailError, TaskFailedError, ValidationError } from '../src/errors.js';
 import { load } from '../src/index.js';
 
 describe('Pass', () => {
@@ -228,6 +228,144 @@ test('executes a Wait step', async () => {
   const result = await stateMachine.execute({ someString: 'hello' });
 
   expect(result).toEqual({ someString: 'hello' });
+});
+
+describe('Catch', () => {
+  test('catches a matching error', async () => {
+    const definition = {
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Catch: [
+            {
+              ErrorEquals: [
+                'States.SomeOtherError',
+                'States.TaskFailed',
+              ],
+              ResultPath: '$.error',
+              Next: 'CaughtStep',
+            },
+          ],
+          End: true,
+        },
+        CaughtStep: {
+          Type: 'Succeed',
+        },
+      },
+    };
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: () => {
+          throw new Error('Oh no!');
+        },
+      },
+    ];
+  
+    const stateMachine = load(definition, resources);
+    const result = await stateMachine.execute({ someKey: 'someValue' });
+  
+    expect(result).toEqual({
+      someKey: 'someValue',
+      error: {
+        Error: 'States.TaskFailed',
+        Cause: 'Error: Oh no!'
+      },
+    });
+  });
+
+  test('catches any error with a wildcard', async () => {
+    const definition = {
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Catch: [
+            {
+              ErrorEquals: [
+                'States.SomeOtherError',
+              ],
+              Next: 'CaughtOtherStep',
+            },
+            {
+              ErrorEquals: [
+                'States.ALL',
+              ],
+              Next: 'CaughtStep',
+            },
+          ],
+          End: true,
+        },
+        CaughtOtherStep: {
+          Type: 'Fail',
+        },
+        CaughtStep: {
+          Type: 'Succeed',
+        },
+      },
+    };
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: () => {
+          throw new Error('Oh no!');
+        },
+      },
+    ];
+  
+    const stateMachine = load(definition, resources);
+    const result = await stateMachine.execute({ someKey: 'someValue' });
+  
+    expect(result).toEqual({
+      Error: 'States.TaskFailed',
+      Cause: 'Error: Oh no!'
+    });
+  });
+
+  test('throws again if no catchers match the error', async () => {
+    const definition = {
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Catch: [
+            {
+              ErrorEquals: [
+                'States.SomeOtherError',
+              ],
+              Next: 'CaughtStep',
+            },
+          ],
+          End: true,
+        },
+        CaughtStep: {
+          Type: 'Succeed',
+        },
+      },
+    };
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: () => {
+          throw new Error('Oh no!');
+        },
+      },
+    ];
+  
+    const stateMachine = load(definition, resources);
+
+    expect(() => stateMachine.execute({ someKey: 'someValue' })).rejects.toThrowError(TaskFailedError);
+  });
 });
 
 test('throws a ValidationError for an invalid definition', () => {
