@@ -152,6 +152,3 @@ Some functionality yet to be implemented:
 * `Retry` and `Catch` fields
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation
-
-`Map` steps are not currently supported by the validation library, so definitions containing these
-steps will need `validateDefinition` set to `false`.

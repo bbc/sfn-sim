@@ -205,11 +205,7 @@ test('executes a Map step', async () => {
     },
   ];
 
-  const options = {
-    validateDefinition: false,
-  };
-
-  const stateMachine = load(definition, resources, options);
+  const stateMachine = load(definition, resources);
   const result = await stateMachine.execute([{ number: 1 }, { number: 2 }, { number: 3 }]);
 
   expect(mockAdder).toHaveBeenCalledTimes(3);
