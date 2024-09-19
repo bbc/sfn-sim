@@ -1,5 +1,5 @@
 import { vi, test, expect, describe } from 'vitest';
-import { TaskFailedError, SimulatorError, RuntimeError } from '../src/errors.js';
+import { TaskFailedError, SimulatorError } from '../src/errors.js';
 import runTask from '../src/task.js';
 
 describe('lambda', () => {
