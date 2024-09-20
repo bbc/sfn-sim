@@ -79,79 +79,18 @@ const execute = async (definition, data) => {
       continue;
     }
 
-    if (state.Type === 'Parallel') {
+    if (['Parallel', 'Map', 'Task'].includes(state.Type)) {
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
       try {
-        const branches = state.Branches.map((branch) => {
-          const branchData = {
-            ...data,
-            context: {
-              ...data.context,
-              Execution: {
-                ...data.context.Execution,
-                Input: effectiveInput,
-              },
-              State: {
-                ...data.context.State,
-                Name: branch.StartAt,
-              },
-            },
-          };
-
-          return execute(branch, branchData);
-        });
-        const result = await Promise.all(branches);
-
-        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
-
-        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
-      } catch (error) {
-        for (const catcher of state?.Catch || []) {
-          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
-            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
-
-            data.context.State.Name = catcher.Next;
-
-            continue main;
-          }
+        let result;
+        if (state.Type === 'Parallel') {
+          result = await executeParallel(state, data, effectiveInput);
+        } else if (state.Type === 'Map') {
+          result = await executeMap(state, data, effectiveInput);
+        } else if (state.Type === 'Task') {
+          result = await runTask(state, data, effectiveInput);
         }
-
-        throw error;
-      }
-    }
-
-    if (state.Type === 'Map') {
-      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
-
-      const items = getValue(effectiveInput, state.ItemsPath);
-
-      try {
-        const executions = items.map((Value, Index) => {
-          const itemData = {
-            ...data,
-            context: {
-              ...data.context,
-              Execution: {
-                ...data.context.Execution,
-                Input: Value,
-              },
-              State: {
-                ...data.context.State,
-                Name: state.ItemProcessor.StartAt,
-              },
-              Map: {
-                Item: {
-                  Index,
-                  Value,
-                },
-              },
-            },
-          };
-
-          return execute(state.ItemProcessor, itemData);
-        });
-        const result = await Promise.all(executions);
 
         const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
 
@@ -186,30 +125,6 @@ const execute = async (definition, data) => {
       stateResult = stateInput;
     }
 
-    if (state.Type === 'Task') {
-      const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
-
-      try {
-        const result = await runTask(state, data, effectiveInput);
-
-        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
-
-        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
-      } catch (error) {
-        for (const catcher of state?.Catch || []) {
-          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
-            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
-
-            data.context.State.Name = catcher.Next;
-
-            continue main;
-          }
-        }
-
-        throw error;
-      }
-    }
-
     if (state.Type === 'Pass') {
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
@@ -227,6 +142,60 @@ const execute = async (definition, data) => {
     rawInput = stateOutput;
     data.context.State.Name = state.Next;
   }
+};
+
+const executeParallel = (state, data, effectiveInput) => {
+  const branches = state.Branches.map((branch) => {
+    const branchData = {
+      ...data,
+      context: {
+        ...data.context,
+        Execution: {
+          ...data.context.Execution,
+          Input: effectiveInput,
+        },
+        State: {
+          ...data.context.State,
+          Name: branch.StartAt,
+        },
+      },
+    };
+
+    return execute(branch, branchData);
+  });
+
+  return Promise.all(branches);
+};
+
+const executeMap = (state, data, effectiveInput) => {
+  const items = getValue(effectiveInput, state.ItemsPath);
+
+  const executions = items.map((Value, Index) => {
+    const itemData = {
+      ...data,
+      context: {
+        ...data.context,
+        Execution: {
+          ...data.context.Execution,
+          Input: Value,
+        },
+        State: {
+          ...data.context.State,
+          Name: state.ItemProcessor.StartAt,
+        },
+        Map: {
+          Item: {
+            Index,
+            Value,
+          },
+        },
+      },
+    };
+
+    return execute(state.ItemProcessor, itemData);
+  });
+
+  return Promise.all(executions);
 };
 
 export {
