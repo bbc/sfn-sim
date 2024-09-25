@@ -487,7 +487,7 @@ describe('stepFunctions', () => {
           Input: { someKey: 'someValue' },
         };
 
-        expect(() => runTask(state, data, input)).rejects.toThrowError(TaskFailedError);
+        await expect(() => runTask(state, data, input)).rejects.toThrowError(TaskFailedError);
       });
     });
 

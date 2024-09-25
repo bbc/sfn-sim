@@ -1,6 +1,17 @@
-import { vi, describe, test, expect } from 'vitest';
+import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { FailError, TaskFailedError, ValidationError } from '../src/errors.js';
 import { load } from '../src/index.js';
+
+const mockWait = vi.hoisted(() => vi.fn());
+
+vi.mock('../src/utils.js', async () => ({
+  ...(await vi.importActual('../src/utils.js')),
+  wait: mockWait,
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe('Pass', () => {
   test('returns given input if no Result specified', async () => {
@@ -218,7 +229,7 @@ test('executes a Wait step', async () => {
     States: {
       WaitStep: {
         Type: 'Wait',
-        Seconds: 1,
+        Seconds: 5,
         End: true,
       },
     },
@@ -227,10 +238,103 @@ test('executes a Wait step', async () => {
   const stateMachine = load(definition);
   const result = await stateMachine.execute({ someString: 'hello' });
 
+  expect(mockWait).toHaveBeenCalledWith(5, expect.any(Object));
   expect(result).toEqual({ someString: 'hello' });
 });
 
-describe('Catch', () => {
+describe('Error handling', () => {
+  test('retries a failed task with backoff', async () => {
+    const definition = {
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Retry: [
+            {
+              ErrorEquals: [
+                'States.SomeOtherError',
+                'States.TaskFailed',
+              ],
+              MaxAttempts: 2,
+              IntervalSeconds: 4,
+              BackoffRate: 1.5,
+            },
+          ],
+          End: true,
+        },
+      },
+    };
+
+    const mockLambda = vi.fn()
+      .mockImplementationOnce(() => { throw new Error('Oh no!'); })
+      .mockImplementationOnce(() => { throw new Error('Oh no!'); })
+      .mockImplementationOnce(() => ({ someResult: 'success' }));
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: mockLambda,
+      },
+    ];
+
+    const options = {
+      simulateWait: false,
+    };
+  
+    const stateMachine = load(definition, resources, options);
+    const result = await stateMachine.execute({ someKey: 'someValue' });
+
+    expect(mockWait).toHaveBeenCalledWith(4, expect.any(Object));
+    expect(mockWait).toHaveBeenCalledWith(6, expect.any(Object));
+    expect(result).toEqual({ someResult: 'success' });
+  });
+
+  test('fails if the max attempts are exceeded', async () => {
+    const definition = {
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Retry: [
+            {
+              ErrorEquals: [
+                'States.SomeOtherError',
+                'States.TaskFailed',
+              ],
+              MaxAttempts: 2,
+              IntervalSeconds: 4,
+              BackoffRate: 1.5,
+            },
+          ],
+          End: true,
+        },
+      },
+    };
+
+    const mockLambda = vi.fn().mockImplementation(() => { throw new Error('Oh no!'); });
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: mockLambda,
+      },
+    ];
+
+    const options = {
+      simulateWait: false,
+    };
+  
+    const stateMachine = load(definition, resources, options);
+
+    await expect(() => stateMachine.execute({ someKey: 'someValue' })).rejects.toThrowError(TaskFailedError);
+
+    expect(mockWait).toHaveBeenCalledTimes(2);
+  });
+
   test('catches a matching error', async () => {
     const definition = {
       StartAt: 'TaskStep',
@@ -364,7 +468,7 @@ describe('Catch', () => {
   
     const stateMachine = load(definition, resources);
 
-    expect(() => stateMachine.execute({ someKey: 'someValue' })).rejects.toThrowError(TaskFailedError);
+    await expect(() => stateMachine.execute({ someKey: 'someValue' })).rejects.toThrowError(TaskFailedError);
   });
 });
 

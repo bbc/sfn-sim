@@ -146,9 +146,8 @@ This should be an object which can be used to override the default configuration
 
 ## Notes
 
-This library is currently a work-in-progress and does not support every feature of Step Functions.
-Some functionality yet to be implemented:
+This library supports most available features of Step Functions. Some functionality has not been
+implemented yet, including:
 
-* `Retry` fields
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation

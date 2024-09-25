@@ -4,7 +4,7 @@ import runChoice from './choice.js';
 import { ValidationError, RuntimeError, FailError, ERROR_WILDCARD } from './errors.js';
 import { defaultOptions } from './options.js';
 import runTask from './task.js';
-import { getValue, applyPayloadTemplate, getStateResult } from './utils.js';
+import { getValue, applyPayloadTemplate, getStateResult, wait } from './utils.js';
 
 const load = (definition, resources = [], overrideOptions = {}) => {
   const { executionName, stateMachineName, ...otherOverrideOptions } = overrideOptions;
@@ -82,31 +82,60 @@ const execute = async (definition, data) => {
     if (['Parallel', 'Map', 'Task'].includes(state.Type)) {
       const effectiveInput = applyPayloadTemplate(stateInput, data, state.Parameters);
 
-      try {
-        let result;
-        if (state.Type === 'Parallel') {
-          result = await executeParallel(state, data, effectiveInput);
-        } else if (state.Type === 'Map') {
-          result = await executeMap(state, data, effectiveInput);
-        } else if (state.Type === 'Task') {
-          result = await runTask(state, data, effectiveInput);
-        }
+      const retriers = (state.Retry || []).map((retrier) => ({
+        ...retrier,
+        remainingAttempts: retrier.MaxAttempts || 3,
+        currentInterval: retrier.IntervalSeconds || 1,
+        BackoffRate: retrier.BackoffRate || 2,
+      }));
 
-        const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
-
-        stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
-      } catch (error) {
-        for (const catcher of state?.Catch || []) {
-          if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
-            rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
-
-            data.context.State.Name = catcher.Next;
-
-            continue main;
+      retry: while (true) {
+        try {
+          let result;
+          if (state.Type === 'Parallel') {
+            result = await executeParallel(state, data, effectiveInput);
+          } else if (state.Type === 'Map') {
+            result = await executeMap(state, data, effectiveInput);
+          } else if (state.Type === 'Task') {
+            result = await runTask(state, data, effectiveInput);
           }
-        }
 
-        throw error;
+          const effectiveResult = applyPayloadTemplate(result, data, state.ResultSelector);
+
+          stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+
+          break retry;
+        } catch (error) {
+          for (const retrier of retriers) {
+            if (retrier.ErrorEquals.includes(error.name) || retrier.ErrorEquals.includes(ERROR_WILDCARD)) {
+              if (retrier.remainingAttempts > 0) {
+                const interval = retrier.MaxDelaySeconds
+                  ? Math.min(retrier.currentInterval, retrier.MaxDelaySeconds)
+                  : retrier.currentInterval;
+
+                await wait(interval, data);
+
+                retrier.currentInterval = retrier.currentInterval * retrier.BackoffRate;
+                retrier.remainingAttempts--;
+                continue retry;
+              } else {
+                break;
+              }
+            }
+          }
+
+          for (const catcher of state.Catch || []) {
+            if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
+              rawInput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
+
+              data.context.State.Name = catcher.Next;
+
+              continue main;
+            }
+          }
+
+          throw error;
+        }
       }
     }
 
@@ -117,10 +146,7 @@ const execute = async (definition, data) => {
         throw new RuntimeError('Could not resolve value of Seconds or SecondsPath in Wait step');
       }
 
-      if (data.options.simulateWait) {
-        const duration = state.Seconds * 1000;
-        await new Promise(resolve => setTimeout(resolve, duration));
-      }
+      await wait(state.Seconds, data);
 
       stateResult = stateInput;
     }

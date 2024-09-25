@@ -61,9 +61,17 @@ const getStateResult = (rawInput, stateResult, resultPath) => {
   return input;
 };
 
+const wait = (seconds, { options: { simulateWait } }) => {
+  if (simulateWait) {
+    const duration = seconds * 1000;
+    return new Promise(resolve => setTimeout(resolve, duration));
+  }
+};
+
 export {
   getValue,
   setValue,
   applyPayloadTemplate,
   getStateResult,
+  wait,
 };
