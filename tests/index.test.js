@@ -278,12 +278,8 @@ describe('Error handling', () => {
         function: mockLambda,
       },
     ];
-
-    const options = {
-      simulateWait: false,
-    };
   
-    const stateMachine = load(definition, resources, options);
+    const stateMachine = load(definition, resources);
     const result = await stateMachine.execute({ someKey: 'someValue' });
 
     expect(mockWait).toHaveBeenCalledWith(4, expect.any(Object));
@@ -323,12 +319,8 @@ describe('Error handling', () => {
         function: mockLambda,
       },
     ];
-
-    const options = {
-      simulateWait: false,
-    };
   
-    const stateMachine = load(definition, resources, options);
+    const stateMachine = load(definition, resources);
 
     await expect(() => stateMachine.execute({ someKey: 'someValue' })).rejects.toThrowError(TaskFailedError);
 
