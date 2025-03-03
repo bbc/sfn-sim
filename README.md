@@ -151,3 +151,4 @@ implemented yet, including:
 
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation
+* JSONata query language support
