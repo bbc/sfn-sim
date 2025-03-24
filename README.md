@@ -151,4 +151,5 @@ implemented yet, including:
 
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation
+* Waiting for completion with task tokens
 * JSONata query language support
