@@ -2,6 +2,7 @@ import { vi, describe, test, expect, beforeEach } from 'vitest';
 import { v4 as uuidV4 } from 'uuid';
 import { FailError, TaskFailedError } from '../src/errors.js';
 import { executeStateMachine } from '../src/executors.js';
+import { defaultOptions } from '../src/options.js';
 
 const mockWait = vi.hoisted(() => vi.fn());
 
@@ -10,21 +11,33 @@ vi.mock('../src/utils.js', async () => ({
   wait: mockWait,
 }));
 
-const getContext = (definition, Input) => ({
-  Execution: {
-    Id: uuidV4(),
-    Input,
-    Name: 'test-execution',
-    StartTime: new Date().toISOString(),
+const getVariables = (definition, input) => ({
+  states: {
+    input,
+    context: {
+      Execution: {
+        Id: uuidV4(),
+        Input: input,
+        Name: 'test-execution',
+        StartTime: new Date().toISOString(),
+      },
+      State: {
+        Name: definition.StartAt,
+      },
+      StateMachine: {
+        Id: uuidV4(),
+        Name: 'test-state-machine',
+      },
+      Task: {},
+    },
   },
-  State: {
-    Name: definition.StartAt,
-  },
-  StateMachine: {
-    Id: uuidV4(),
-    Name: 'test-state-machine',
-  },
-  Task: {},
+});
+
+const getSimulatorContext = (overrides = {}) => ({
+  resources: [],
+  options: defaultOptions,
+  queryLanguage: 'JSONPath',
+  ...overrides,
 });
 
 beforeEach(() => {
@@ -44,8 +57,10 @@ describe('Pass', () => {
     };
 
     const input = { someString: 'hello' };
-    const data = { context: getContext(definition, input) };
-    const result = await executeStateMachine(definition, data);
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext();
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
 
     expect(result).toEqual({ someString: 'hello' });
   });
@@ -65,8 +80,10 @@ describe('Pass', () => {
     };
 
     const input = { someOtherString: 'goodbye' };
-    const data = { context: getContext(definition, input) };
-    const result = await executeStateMachine(definition, data);
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext();
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
 
     expect(result).toEqual({ someString: 'hello' });
   });
@@ -94,8 +111,10 @@ test('executes a Task step', async () => {
   ];
 
   const input = { someNumber: 2 };
-  const data = { resources, context: getContext(definition, input) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext({ resources });
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(mockLambda).toHaveBeenCalledWith({ someNumber: 2 });
   expect(result).toEqual({ someNumber: 3 });
@@ -113,9 +132,10 @@ test('executes a Fail step', async () => {
     },
   };
 
-  const data = { context: getContext(definition, null) };
+  const variables = getVariables(definition, {});
+  const simulatorContext = getSimulatorContext();
 
-  await expect(() => executeStateMachine(definition, data)).rejects.toThrowError(FailError);
+  await expect(() => executeStateMachine(definition, variables, simulatorContext)).rejects.toThrowError(FailError);
 });
 
 test('executes a Succeed step', async () => {
@@ -129,8 +149,10 @@ test('executes a Succeed step', async () => {
   };
 
   const input = { someString: 'hello' };
-  const data = { context: getContext(definition, input) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(result).toEqual({ someString: 'hello' });
 });
@@ -160,8 +182,10 @@ test('executes a Choice step', async () => {
   };
 
   const input = { shouldPass: true };
-  const data = { context: getContext(definition, input) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(result).toEqual({ shouldPass: true });
 });
@@ -203,8 +227,10 @@ test('executes a Parallel step', async () => {
     },
   };
 
-  const data = { context: getContext(definition, null) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, {});
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(result).toEqual([{ branchA: true }, { branchB: true }]);
 });
@@ -240,8 +266,10 @@ test('executes a Map step', async () => {
   ];
 
   const input = [{ number: 1 }, { number: 2 }, { number: 3 }];
-  const data = { resources, context: getContext(definition, input) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext({ resources });
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(mockAdder).toHaveBeenCalledTimes(3);
   expect(result).toEqual([{ number: 2 }, { number: 3 }, { number: 4 }]);
@@ -260,8 +288,10 @@ test('executes a Wait step', async () => {
   };
 
   const input = { someString: 'hello' };
-  const data = { context: getContext(definition, input) };
-  const result = await executeStateMachine(definition, data);
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(mockWait).toHaveBeenCalledWith(5, expect.any(Object));
   expect(result).toEqual({ someString: 'hello' });
@@ -305,8 +335,10 @@ describe('Error handling', () => {
     ];
 
     const input = { someKey: 'someValue' };
-    const data = { resources, context: getContext(definition, input) };
-    const result = await executeStateMachine(definition, data);
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
 
     expect(mockWait).toHaveBeenCalledWith(4, expect.any(Object));
     expect(mockWait).toHaveBeenCalledWith(6, expect.any(Object));
@@ -347,9 +379,10 @@ describe('Error handling', () => {
     ];
 
     const input = { someKey: 'someValue' };
-    const data = { resources, context: getContext(definition, input) };
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
 
-    await expect(() => executeStateMachine(definition, data)).rejects.toThrowError(TaskFailedError);
+    await expect(() => executeStateMachine(definition, variables, simulatorContext)).rejects.toThrowError(TaskFailedError);
 
     expect(mockWait).toHaveBeenCalledTimes(2);
   });
@@ -390,8 +423,10 @@ describe('Error handling', () => {
     ];
 
     const input = { someKey: 'someValue' };
-    const data = { resources, context: getContext(definition, input) };
-    const result = await executeStateMachine(definition, data);
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
 
     expect(result).toEqual({
       someKey: 'someValue',
@@ -445,8 +480,10 @@ describe('Error handling', () => {
     ];
 
     const input = { someKey: 'someValue' };
-    const data = { resources, context: getContext(definition, input) };
-    const result = await executeStateMachine(definition, data);
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
 
     expect(result).toEqual({
       Error: 'States.TaskFailed',
@@ -488,8 +525,10 @@ describe('Error handling', () => {
     ];
 
     const input = { someKey: 'someValue' };
-    const data = { resources, context: getContext(definition, input) };
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
 
-    await expect(() => executeStateMachine(definition, data)).rejects.toThrowError(TaskFailedError);
+
+    await expect(() => executeStateMachine(definition, variables, simulatorContext)).rejects.toThrowError(TaskFailedError);
   });
 });

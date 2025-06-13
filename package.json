@@ -20,6 +20,7 @@
   "dependencies": {
     "@wmfs/statelint": "^1.29.0",
     "jshashes": "^1.0.8",
+    "jsonata": "^2.0.6",
     "jsonpath": "^1.1.1",
     "random": "^5.4.0",
     "seedrandom": "^3.0.5",

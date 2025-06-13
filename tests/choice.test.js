@@ -20,7 +20,7 @@ describe('runChoice', () => {
       someString: 'Hello!',
     };
 
-    const nextState = runChoice(state, {}, input);
+    const nextState = runChoice(state, input);
 
     expect(nextState).toEqual('MatchedStep');
   });
@@ -42,7 +42,7 @@ describe('runChoice', () => {
       someString: 'Goodbye!',
     };
 
-    const nextState = runChoice(state, {}, input);
+    const nextState = runChoice(state, input);
 
     expect(nextState).toEqual('DefaultStep');
   });
@@ -63,7 +63,7 @@ describe('runChoice', () => {
       someString: 'Goodbye!',
     };
 
-    expect(() => runChoice(state, {}, input)).toThrowError(NoChoiceMatchedError);
+    expect(() => runChoice(state, input)).toThrowError(NoChoiceMatchedError);
   });
 });
 

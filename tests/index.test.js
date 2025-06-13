@@ -31,12 +31,20 @@ describe('execution', () => {
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       definition,
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            Input: { someString: 'hello' },
+        states: expect.objectContaining({
+          input: { someString: 'hello' },
+          context: expect.objectContaining({
+            Execution: expect.objectContaining({
+              Input: { someString: 'hello' },
+            }),
           }),
         }),
       }),
+      {
+        resources: expect.any(Array),
+        options: expect.any(Object),
+        queryLanguage: expect.any(String),
+      },
     );
     expect(result).toEqual({ someOutput: 'goodbye' });
   });
@@ -57,15 +65,18 @@ describe('execution', () => {
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       definition,
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            Name: 'test-execution',
-          }),
-          StateMachine: expect.objectContaining({
-            Name: 'test-state-machine',
+        states: expect.objectContaining({
+          context: expect.objectContaining({
+            Execution: expect.objectContaining({
+              Name: 'test-execution',
+            }),
+            StateMachine: expect.objectContaining({
+              Name: 'test-state-machine',
+            }),
           }),
         }),
       }),
+      expect.any(Object),
     );
   });
 
@@ -77,12 +88,9 @@ describe('execution', () => {
 
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       definition,
+      expect.any(Object),
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            QueryLanguage: 'JSONPath',
-          }),
-        }),
+        queryLanguage: 'JSONPath',
       }),
     );
   });
@@ -100,12 +108,9 @@ describe('execution', () => {
 
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       jsonataDefinition,
+      expect.any(Object),
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            QueryLanguage: 'JSONata',
-          }),
-        }),
+        queryLanguage: 'JSONata',
       }),
     );
   });

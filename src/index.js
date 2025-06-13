@@ -23,28 +23,42 @@ const load = (definition, resources = [], overrideOptions = {}) => {
   }
 
   return {
-    execute: (Input) => {
+    execute: (input) => {
+      const queryLanguage = definition.QueryLanguage || 'JSONPath';
+
       const context = {
         Execution: {
           Id: uuidV4(),
-          Input,
+          Input: input,
           Name: executionName,
           StartTime: new Date().toISOString(),
-          QueryLanguage: definition.QueryLanguage || 'JSONPath',
+          // RedriveCount:,
+          // RedriveTime:,
         },
         State: {
+          // EnteredTime:,
           Name: definition.StartAt,
+          // RetryCount:,
         },
         StateMachine: {
           Id: uuidV4(),
           Name: stateMachineName,
         },
-        Task: {},
+        Task: {
+          // Token:,
+        },
       };
 
-      const data = { resources, options, context };
+      const variables = {
+        states: {
+          input,
+          context,
+        },
+      };
 
-      return executeStateMachine(definition, data);
+      const simulatorContext = { resources, options, queryLanguage };
+
+      return executeStateMachine(definition, variables, simulatorContext);
     },
   };
 };

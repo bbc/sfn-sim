@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { applyPayloadTemplate, getStateResult, getValue, setValue } from '../src/utils.js';
+import { applyPayloadTemplate, getStateResult, getValue, setValue, evaluateJSONata } from '../src/utils.js';
 
 describe('getValue', () => {
   test('gets a value from an object', () => {
@@ -20,7 +20,7 @@ describe('setValue', () => {
     const object = { someKey: 'someValue' };
 
     setValue(object, '$.someNewKey', 'someNewValue');
-    
+
     expect(object).toEqual({
       someKey: 'someValue',
       someNewKey: 'someNewValue',
@@ -31,7 +31,7 @@ describe('setValue', () => {
     const object = { someArray: [1, 2, 3] };
 
     setValue(object, '$.someArray.[1]', 'two');
-    
+
     expect(object).toEqual({
       someArray: [1, 'two', 3],
     });
@@ -46,11 +46,9 @@ describe('applyPayloadTemplate', () => {
       someObjectString: '{ "someKey": "someValue" }',
     };
 
-    const data = {
-      context: {
-        StateMachine: {
-          Name: 'cool-state-machine',
-        },
+    const context = {
+      StateMachine: {
+        Name: 'cool-state-machine',
       },
     };
 
@@ -64,7 +62,7 @@ describe('applyPayloadTemplate', () => {
       'intrinsic.$': 'States.StringToJson($.someObjectString)',
     };
 
-    const result = applyPayloadTemplate(input, data, payloadTemplate);
+    const result = applyPayloadTemplate(input, context, payloadTemplate);
 
     expect(result).toEqual({
       static: 'staticValue',
@@ -80,7 +78,7 @@ describe('applyPayloadTemplate', () => {
   });
 
   test('defaults to returning the input', () => {
-    expect(applyPayloadTemplate({ someKey: 'someValue'})).toEqual({ someKey: 'someValue'});
+    expect(applyPayloadTemplate({ someKey: 'someValue' })).toEqual({ someKey: 'someValue' });
   });
 });
 
@@ -111,6 +109,40 @@ describe('getStateResult', () => {
   test('discards the result when ResultPath is null', () => {
     expect(getStateResult(input, stateResult, null)).toEqual({
       someInput: 'inputValue',
+    });
+  });
+});
+
+describe('evaluateJSONata', () => {
+  const expression = '$sum(example.value)';
+
+  const data = {
+    example: [
+      { value: 4 },
+      { value: 7 },
+      { value: 13 },
+    ],
+  };
+
+  test('returns a plain string value', async () => {
+    expect(await evaluateJSONata('my test string', data)).toEqual('my test string');
+  });
+
+  test('evaluates a single JSONata expression', async () => {
+    const value = `{% ${expression} %}`;
+
+    expect(await evaluateJSONata(value, data)).toEqual(24);
+  });
+
+  test('evaluates values in an object', async () => {
+    const value = {
+      myString: 'my test string',
+      myExpression: `{% ${expression} %}`,
+    };
+
+    expect(await evaluateJSONata(value, data)).toEqual({
+      myString: 'my test string',
+      myExpression: 24,
     });
   });
 });

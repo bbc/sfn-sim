@@ -1,7 +1,7 @@
 import { NoChoiceMatchedError, RuntimeError } from './errors.js';
 import { getValue } from './utils.js';
 
-const runChoice = (state, _data, input) => {
+const runChoice = (state, input) => {
   for (const choice of state.Choices) {
     if (evaluateChoiceRule(choice, input)) {
       return choice.Next;
