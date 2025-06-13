@@ -30,6 +30,7 @@ const load = (definition, resources = [], overrideOptions = {}) => {
           Input,
           Name: executionName,
           StartTime: new Date().toISOString(),
+          QueryLanguage: definition.QueryLanguage || 'JSONPath',
         },
         State: {
           Name: definition.StartAt,

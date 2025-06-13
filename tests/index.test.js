@@ -68,6 +68,47 @@ describe('execution', () => {
       }),
     );
   });
+
+  test('query language defaults to JSONPath', async () => {
+    mockExecuteStateMachine.mockResolvedValueOnce((input) => input);
+
+    const stateMachine = load(definition);
+    await stateMachine.execute({ someString: 'hello' });
+
+    expect(mockExecuteStateMachine).toHaveBeenCalledWith(
+      definition,
+      expect.objectContaining({
+        context: expect.objectContaining({
+          Execution: expect.objectContaining({
+            QueryLanguage: 'JSONPath',
+          }),
+        }),
+      }),
+    );
+  });
+
+  test('query language can be set to JSONata', async () => {
+    mockExecuteStateMachine.mockResolvedValueOnce((input) => input);
+
+    const jsonataDefinition = {
+      ...definition,
+      QueryLanguage: 'JSONata',
+    };
+
+    const stateMachine = load(jsonataDefinition, [], { validateDefinition: false });
+    await stateMachine.execute({ someString: 'hello' });
+
+    expect(mockExecuteStateMachine).toHaveBeenCalledWith(
+      jsonataDefinition,
+      expect.objectContaining({
+        context: expect.objectContaining({
+          Execution: expect.objectContaining({
+            QueryLanguage: 'JSONata',
+          }),
+        }),
+      }),
+    );
+  });
 });
 
 describe('execution', () => {

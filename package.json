@@ -26,6 +26,6 @@
     "uuid": "^11.1.0"
   },
   "devDependencies": {
-    "vitest": "^3.2.2"
+    "vitest": "^3.2.3"
   }
 }
