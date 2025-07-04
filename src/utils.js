@@ -1,6 +1,9 @@
 import jp from 'jsonpath';
 import jsonata from 'jsonata';
+import { randomBytes } from 'node:crypto';
 import { applyFunction } from './intrinsics.js';
+
+const getTaskToken = () => randomBytes(32).toString('base64');
 
 const getValue = (obj, path = '$') => {
   if (typeof obj !== 'object' && (!path || path === '$')) {
@@ -134,6 +137,7 @@ const assign = async (state, variables) => {
 };
 
 export {
+  getTaskToken,
   getValue,
   setValue,
   applyPayloadTemplate,

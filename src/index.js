@@ -3,6 +3,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { ValidationError } from './errors.js';
 import { defaultOptions } from './options.js';
 import { executeStateMachine } from './executors.js';
+import { getTaskToken } from './utils.js';
 
 const load = (definition, resources = [], overrideOptions = {}) => {
   const { executionName, stateMachineName, ...otherOverrideOptions } = overrideOptions;
@@ -26,6 +27,8 @@ const load = (definition, resources = [], overrideOptions = {}) => {
     execute: (input) => {
       const queryLanguage = definition.QueryLanguage || 'JSONPath';
 
+      const Token = getTaskToken();
+
       const context = {
         Execution: {
           Id: uuidV4(),
@@ -45,7 +48,7 @@ const load = (definition, resources = [], overrideOptions = {}) => {
           Name: stateMachineName,
         },
         Task: {
-          // Token:,
+          Token,
         },
       };
 
