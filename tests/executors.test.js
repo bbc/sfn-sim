@@ -293,7 +293,7 @@ test('executes a Wait step', async () => {
 
   const result = await executeStateMachine(definition, variables, simulatorContext);
 
-  expect(mockWait).toHaveBeenCalledWith(5, expect.any(Object));
+  expect(mockWait).toHaveBeenCalledWith(5, null, expect.any(Object));
   expect(result).toEqual({ someString: 'hello' });
 });
 

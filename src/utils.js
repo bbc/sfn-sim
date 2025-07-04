@@ -62,9 +62,20 @@ const getStateResult = (rawInput, stateResult, resultPath) => {
   return input;
 };
 
-const wait = (seconds, { options: { simulateWait } }) => {
+const wait = (seconds, timestamp, { options: { simulateWait } }) => {
   if (simulateWait) {
-    const duration = seconds * 1000;
+    let duration;
+
+    if (seconds) {
+      duration = seconds * 1000;
+    } else {
+      duration = new Date(timestamp) - new Date();
+
+      if (duration < 0) {
+        return;
+      }
+    }
+
     return new Promise(resolve => setTimeout(resolve, duration));
   }
 };
@@ -92,6 +103,36 @@ const evaluateJSONata = async (value, data) => {
   return value;
 };
 
+const getJSONataInput = async (state, variables) => {
+  if (state.Arguments) {
+    return evaluateJSONata(state.Arguments, variables);
+  } else {
+    return variables.states.input;
+  }
+};
+
+const getJSONataOutput = async (state, variables, defaultOutput = null) => {
+  if (state.Output) {
+    return evaluateJSONata(state.Output, variables);
+  } else {
+    return defaultOutput || variables.states.input;
+  }
+};
+
+const assign = async (state, variables) => {
+  if (state.Assign) {
+
+    const assignment = await evaluateJSONata(state.Assign, variables);
+    for (const variable in assignment) {
+      if (variable === 'states') {
+        continue;
+      }
+
+      variables[variable] = assignment[variable];
+    }
+  }
+};
+
 export {
   getValue,
   setValue,
@@ -99,4 +140,7 @@ export {
   getStateResult,
   wait,
   evaluateJSONata,
+  getJSONataInput,
+  getJSONataOutput,
+  assign,
 };
