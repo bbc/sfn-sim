@@ -1,5 +1,5 @@
 import { test, expect, describe } from 'vitest';
-import { applyPayloadTemplate, getStateResult, getValue, setValue, evaluateJSONata } from '../src/utils.js';
+import { applyPayloadTemplate, getStateResult, getValue, setValue, evaluateJSONata, getJSONataInput, getJSONataOutput, assign } from '../src/utils.js';
 
 describe('getValue', () => {
   test('gets a value from an object', () => {
@@ -134,15 +134,175 @@ describe('evaluateJSONata', () => {
     expect(await evaluateJSONata(value, data)).toEqual(24);
   });
 
-  test('evaluates values in an object', async () => {
+  test('evaluates nested values in objects and arrays', async () => {
     const value = {
       myString: 'my test string',
       myExpression: `{% ${expression} %}`,
+      myObject: {
+        myString: 'my test string',
+        myExpression: `{% ${expression} %}`,
+        myArray: [
+          'my test string',
+          `{% ${expression} %}`,
+        ],
+      },
     };
 
     expect(await evaluateJSONata(value, data)).toEqual({
       myString: 'my test string',
       myExpression: 24,
+      myObject: {
+        myString: 'my test string',
+        myExpression: 24,
+        myArray: [
+          'my test string',
+          24,
+        ],
+      },
+    });
+  });
+});
+
+describe('getJSONataInput', () => {
+  const expression = '$sum(example.value)';
+
+  const variables = {
+    states: {
+      input: {
+        myInput: 1,
+      },
+    },
+    example: [
+      { value: 4 },
+      { value: 7 },
+      { value: 13 },
+    ],
+  };
+
+  test('gets input from state.Arguments', async () => {
+    const state = {
+      Arguments: {
+        myArgument: `{% ${expression} %}`,
+      },
+    };
+
+    expect(await getJSONataInput(state, variables)).toEqual({
+      myArgument: 24,
+    });
+  });
+
+  test('defaults to state input without state.Arguments', async () => {
+    const state = {};
+
+    expect(await getJSONataInput(state, variables)).toEqual({
+      myInput: 1,
+    });
+  });
+});
+
+describe('getJSONataOutput', () => {
+  const expression = '$sum(example.value)';
+
+  const variables = {
+    states: {
+      input: {
+        myInput: 1,
+      },
+    },
+    example: [
+      { value: 4 },
+      { value: 7 },
+      { value: 13 },
+    ],
+  };
+
+  test('gets output from state.Output', async () => {
+    const state = {
+      Output: {
+        myOutput: `{% ${expression} %}`,
+      },
+    };
+
+    expect(await getJSONataOutput(state, variables)).toEqual({
+      myOutput: 24,
+    });
+  });
+
+  test('returns given default without state.Output', async () => {
+    const state = {};
+
+    const defaultOutput = {
+      myDefault: 2,
+    };
+
+    expect(await getJSONataOutput(state, variables, defaultOutput)).toEqual({
+      myDefault: 2,
+    });
+  });
+
+  test('defaults to state input without state.Arguments or given default', async () => {
+    const state = {};
+
+    expect(await getJSONataOutput(state, variables)).toEqual({
+      myInput: 1,
+    });
+  });
+});
+
+describe('assign', () => {
+  test('assigns given variables', async () => {
+    const state = {
+      Assign: {
+        myString: 'new string',
+        myExpression: '{% myExistingVariable %}',
+      },
+    };
+
+    const variables = {
+      myString: 'replace me',
+      myExistingVariable: 'hello',
+    };
+
+    await assign(state, variables);
+
+    expect(variables).toEqual({
+      myExistingVariable: 'hello',
+      myString: 'new string',
+      myExpression: 'hello',
+    });
+  });
+
+  test(`doesn't assign the reserved states variable`, async () => {
+    const state = {
+      Assign: {
+        states: 'something else',
+      },
+    };
+
+    const variables = {
+      states: 'important stuff'
+    };
+
+    await assign(state, variables);
+
+    expect(variables).toEqual({
+      states: 'important stuff'
+    });
+  });
+
+  test(`doesn't assign anything without state.Assign`, async () => {
+    const state = {};
+
+    const variables = {
+      states: 'important stuff',
+      myVariable: 'hello',
+    };
+
+    await assign(state, variables);
+
+    expect(variables).toEqual({
+      states: 'important stuff',
+      myVariable: 'hello',
     });
   });
 });
