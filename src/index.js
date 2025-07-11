@@ -35,13 +35,10 @@ const load = (definition, resources = [], overrideOptions = {}) => {
           Input: input,
           Name: executionName,
           StartTime: new Date().toISOString(),
-          // RedriveCount:,
-          // RedriveTime:,
+          RedriveCount: 0,
         },
         State: {
-          // EnteredTime:,
           Name: definition.StartAt,
-          // RetryCount:,
         },
         StateMachine: {
           Id: uuidV4(),

@@ -18,7 +18,7 @@ const executePassJSONata = async (state, variables, _simulatorContext) => {
 };
 
 const executeTaskJSONata = async (state, variables, simulatorContext) => {
-  const input = await getJSONataInput(state, variables); // TODO lambda integration types
+  const input = await getJSONataInput(state, variables);
 
   const Payload = await runTask(state, simulatorContext, input);
 
@@ -90,10 +90,6 @@ const executeParallelJSONata = async (state, variables, simulatorContext) => {
         input,
         context: {
           ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: input, // TODO is this actually replaced?
-          },
           State: {
             ...variables.states.context.State,
             Name: branch.StartAt,
@@ -129,10 +125,6 @@ const executeMapJSONata = async (state, variables, simulatorContext) => {
         input: Value,
         context: {
           ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: Value,
-          },
           State: {
             ...variables.states.context.State,
             Name: state.ItemProcessor.StartAt,
@@ -272,10 +264,6 @@ const executeParallelJSONPath = async (state, variables, simulatorContext) => {
         input: effectiveInput,
         context: {
           ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: effectiveInput,
-          },
           State: {
             ...variables.states.context.State,
             Name: branch.StartAt,
@@ -313,10 +301,6 @@ const executeMapJSONPath = async (state, variables, simulatorContext) => {
         input: Value,
         context: {
           ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: Value,
-          },
           State: {
             ...variables.states.context.State,
             Name: state.ItemProcessor.StartAt,
