@@ -90,8 +90,9 @@ const evaluateJSONataString = (value, data) => {
     return value;
   }
 
-  const expression = jsonata(value.substring(2, value.length - 2).trim());
-  return expression.evaluate(data);
+  const expression = value.substring(2, value.length - 2).trim();
+
+  return jsonata(expression).evaluate({}, data);
 };
 
 const evaluateJSONata = async (value, data) => {

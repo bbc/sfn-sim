@@ -56,8 +56,8 @@ test('executes a Pass step', async () => {
           myAssignment: 'my assigned string',
         },
         Output: {
-          myInput: '{% states.input.myInput %}',
-          myResult: '{% myTestVariable %}',
+          myInput: '{% $states.input.myInput %}',
+          myResult: '{% $myTestVariable %}',
         },
         End: true,
       },
@@ -85,7 +85,7 @@ test('executes a Task step', async () => {
       TaskStep: {
         Type: 'Task',
         Resource: 'arn:aws:lambda:::function:my-function',
-        Output: '{% states.result.Payload %}',
+        Output: '{% $states.result.Payload %}',
         End: true,
       },
     },
@@ -262,14 +262,14 @@ test('executes a Map step', async () => {
     States: {
       MapStep: {
         Type: 'Map',
-        Items: '{% states.input %}',
+        Items: '{% $states.input %}',
         ItemProcessor: {
           StartAt: 'AddOne',
           States: {
             AddOne: {
               Type: 'Pass',
               Output: {
-                number: '{% states.input.number + 1 %}',
+                number: '{% $states.input.number + 1 %}',
               },
               End: true,
             },
@@ -298,7 +298,7 @@ describe('Error handling', () => {
         TaskStep: {
           Type: 'Task',
           Resource: 'arn:aws:lambda:::function:my-function',
-          Output: '{% states.result.Payload %}',
+          Output: '{% $states.result.Payload %}',
           Retry: [
             {
               ErrorEquals: [

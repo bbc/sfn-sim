@@ -114,7 +114,7 @@ describe('getStateResult', () => {
 });
 
 describe('evaluateJSONata', () => {
-  const expression = '$sum(example.value)';
+  const expression = '$sum($example.value)';
 
   const data = {
     example: [
@@ -168,7 +168,7 @@ describe('evaluateJSONata', () => {
 });
 
 describe('getJSONataInput', () => {
-  const expression = '$sum(example.value)';
+  const expression = '$sum($example.value)';
 
   const variables = {
     states: {
@@ -205,7 +205,7 @@ describe('getJSONataInput', () => {
 });
 
 describe('getJSONataOutput', () => {
-  const expression = '$sum(example.value)';
+  const expression = '$sum($example.value)';
 
   const variables = {
     states: {
@@ -258,7 +258,7 @@ describe('assign', () => {
     const state = {
       Assign: {
         myString: 'new string',
-        myExpression: '{% myExistingVariable %}',
+        myExpression: '{% $myExistingVariable %}',
       },
     };
 
