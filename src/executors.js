@@ -3,46 +3,42 @@ import { RuntimeError, FailError, ERROR_WILDCARD } from './errors.js';
 import runTask from './task.js';
 import { getValue, applyPayloadTemplate, getStateResult, wait, evaluateJSONata, getJSONataInput, getJSONataOutput, assign } from './utils.js';
 
-const executeFail = (state, variables, _simulatorContext) => {
-  const rawInput = variables.states.input;
+/*
+* JSONata
+*/
 
-  const error = state.Error || (state.ErrorPath ? getValue(rawInput, state.ErrorPath) : null);
-  const cause = state.Cause || (state.CausePath ? getValue(rawInput, state.CausePath) : null);
+const executePassJSONata = async (state, variables, _simulatorContext) => {
+  await assign(state, variables);
 
-  throw new FailError(error, cause);
-};
-
-const executeFailJSONata = async (state, variables, _simulatorContext) => {
-  const error = state.Error ? await evaluateJSONata(state.Error, variables) : null;
-  const cause = state.Cause ? await evaluateJSONata(state.Cause, variables) : null;
-
-  throw new FailError(error, cause);
-};
-
-const executeSucceed = (state, variables, _simulatorContext) => {
-  const rawInput = variables.states.input;
-  const stateInput = getValue(rawInput, state.InputPath);
-
-  const stateOutput = getValue(stateInput, state.OutputPath);
-
-  return [stateOutput, null];
-};
-
-const executeSucceedJSONata = async (state, variables, _simulatorContext) => {
   const output = await getJSONataOutput(state, variables);
 
-  return [output, null];
+  const next = state.End ? null : state.Next;
+
+  return [output, next];
 };
 
-const executeChoice = async (state, variables, simulatorContext) => {
-  const rawInput = variables.states.input;
-  const stateInput = getValue(rawInput, state.InputPath);
+const executeTaskJSONata = async (state, variables, simulatorContext) => {
+  const input = await getJSONataInput(state, variables); // TODO lambda integration types
 
-  const next = runJSONPathChoice(state, stateInput, simulatorContext);
+  const Payload = await runTask(state, simulatorContext, input);
 
-  const stateOutput = getValue(stateInput, state.OutputPath);
+  const taskVariables = {
+    ...variables,
+    states: {
+      ...variables.states,
+      result: {
+        Payload,
+      },
+    },
+  };
 
-  return [stateOutput, next];
+  await assign(state, taskVariables);
+
+  const output = await getJSONataOutput(state, taskVariables);
+
+  const next = state.End ? null : state.Next;
+
+  return [output, next];
 };
 
 const executeChoiceJSONata = async (state, variables, simulatorContext) => {
@@ -51,43 +47,36 @@ const executeChoiceJSONata = async (state, variables, simulatorContext) => {
   return [output, next];
 };
 
-const executeParallel = async (state, variables, simulatorContext) => {
-  const rawInput = variables.states.input;
-  const stateInput = getValue(rawInput, state.InputPath);
-  const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
+const executeWaitJSONata = async (state, variables, simulatorContext) => {
+  const seconds = await evaluateJSONata(state.Seconds, variables) ?? null;
+  const timestamp = await evaluateJSONata(state.Timestamp, variables) ?? null;
 
-  const branches = state.Branches.map((branch) => {
-    const branchVariables = {
-      ...variables,
-      states: {
-        ...variables.states,
-        input: effectiveInput,
-        context: {
-          ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: effectiveInput,
-          },
-          State: {
-            ...variables.states.context.State,
-            Name: branch.StartAt,
-          },
-        },
-      },
-    };
+  if (!seconds && !timestamp) {
+    throw new RuntimeError('No Seconds or Timestamp specified in Wait step');
+  }
 
-    return executeStateMachine(branch, branchVariables, simulatorContext);
-  });
+  await wait(seconds, timestamp, simulatorContext);
 
-  const result = await Promise.all(branches);
+  await assign(state, variables);
 
-  const effectiveResult = applyPayloadTemplate(result, variables.states.context, state.ResultSelector);
-  const stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
-  const stateOutput = getValue(stateResult, state.OutputPath);
+  const output = getJSONataOutput(state, variables);
 
   const next = state.End ? null : state.Next;
 
-  return [stateOutput, next];
+  return [output, next];
+};
+
+const executeSucceedJSONata = async (state, variables, _simulatorContext) => {
+  const output = await getJSONataOutput(state, variables);
+
+  return [output, null];
+};
+
+const executeFailJSONata = async (state, variables, _simulatorContext) => {
+  const error = state.Error ? await evaluateJSONata(state.Error, variables) : null;
+  const cause = state.Cause ? await evaluateJSONata(state.Cause, variables) : null;
+
+  throw new FailError(error, cause);
 };
 
 const executeParallelJSONata = async (state, variables, simulatorContext) => {
@@ -125,53 +114,6 @@ const executeParallelJSONata = async (state, variables, simulatorContext) => {
   const next = state.End ? null : state.Next;
 
   return [output, next];
-};
-
-const executeMap = async (state, variables, simulatorContext) => {
-  const rawInput = variables.states.input;
-  const stateInput = getValue(rawInput, state.InputPath);
-  const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
-
-  const items = getValue(effectiveInput, state.ItemsPath);
-
-  const executions = items.map((Value, Index) => {
-    const itemVariables = {
-      ...variables,
-      states: {
-        ...variables.states,
-        input: Value,
-        context: {
-          ...variables.states.context,
-          Execution: {
-            ...variables.states.context.Execution,
-            Input: Value,
-          },
-          State: {
-            ...variables.states.context.State,
-            Name: state.ItemProcessor.StartAt,
-          },
-          Map: {
-            Item: {
-              Index,
-              Value,
-            },
-          },
-        },
-      },
-    };
-
-    return executeStateMachine(state.ItemProcessor, itemVariables, simulatorContext);
-  });
-
-  const result = await Promise.all(executions);
-
-  const effectiveResult = applyPayloadTemplate(result, variables.states.context, state.ResultSelector);
-  const stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
-  const stateOutput = getValue(stateResult, state.OutputPath);
-
-  const next = state.End ? null : state.Next;
-
-  return [stateOutput, next];
 };
 
 const executeMapJSONata = async (state, variables, simulatorContext) => {
@@ -233,7 +175,26 @@ const executeMapJSONata = async (state, variables, simulatorContext) => {
   return [output, next];
 };
 
-const executeTask = async (state, variables, simulatorContext) => {
+/*
+* JSONPath
+*/
+
+const executePassJSONPath = (state, variables, _simulatorContext) => {
+  const rawInput = variables.states.input;
+  const stateInput = getValue(rawInput, state.InputPath);
+  const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
+
+  const result = state.Result || effectiveInput;
+
+  const stateResult = getStateResult(rawInput, result, state.ResultPath);
+  const stateOutput = getValue(stateResult, state.OutputPath);
+
+  const next = state.End ? null : state.Next;
+
+  return [stateOutput, next];
+};
+
+const executeTaskJSONPath = async (state, variables, simulatorContext) => {
   const rawInput = variables.states.input;
   const stateInput = getValue(rawInput, state.InputPath);
   const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
@@ -249,31 +210,18 @@ const executeTask = async (state, variables, simulatorContext) => {
   return [stateOutput, next];
 };
 
-const executeTaskJSONata = async (state, variables, simulatorContext) => {
-  const input = await getJSONataInput(state, variables); // TODO lambda integration types
+const executeChoiceJSONPath = async (state, variables, simulatorContext) => {
+  const rawInput = variables.states.input;
+  const stateInput = getValue(rawInput, state.InputPath);
 
-  const Payload = await runTask(state, simulatorContext, input);
+  const next = runJSONPathChoice(state, stateInput, simulatorContext);
 
-  const taskVariables = {
-    ...variables,
-    states: {
-      ...variables.states,
-      result: {
-        Payload,
-      },
-    },
-  };
+  const stateOutput = getValue(stateInput, state.OutputPath);
 
-  await assign(state, taskVariables);
-
-  const output = await getJSONataOutput(state, taskVariables);
-
-  const next = state.End ? null : state.Next;
-
-  return [output, next];
+  return [stateOutput, next];
 };
 
-const executeWait = async (state, variables, simulatorContext) => {
+const executeWaitJSONPath = async (state, variables, simulatorContext) => {
   const rawInput = variables.states.input;
   const stateInput = getValue(rawInput, state.InputPath);
 
@@ -293,33 +241,56 @@ const executeWait = async (state, variables, simulatorContext) => {
   return [stateOutput, next];
 };
 
-const executeWaitJSONata = async (state, variables, simulatorContext) => {
-  const seconds = await evaluateJSONata(state.Seconds, variables) ?? null;
-  const timestamp = await evaluateJSONata(state.Timestamp, variables) ?? null;
+const executeSucceedJSONPath = (state, variables, _simulatorContext) => {
+  const rawInput = variables.states.input;
+  const stateInput = getValue(rawInput, state.InputPath);
 
-  if (!seconds && !timestamp) {
-    throw new RuntimeError('No Seconds or Timestamp specified in Wait step');
-  }
+  const stateOutput = getValue(stateInput, state.OutputPath);
 
-  await wait(seconds, timestamp, simulatorContext);
-
-  await assign(state, variables);
-
-  const output = getJSONataOutput(state, variables);
-
-  const next = state.End ? null : state.Next;
-
-  return [output, next];
+  return [stateOutput, null];
 };
 
-const executePass = (state, variables, _simulatorContext) => {
+const executeFailJSONPath = (state, variables, _simulatorContext) => {
+  const rawInput = variables.states.input;
+
+  const error = state.Error || (state.ErrorPath ? getValue(rawInput, state.ErrorPath) : null);
+  const cause = state.Cause || (state.CausePath ? getValue(rawInput, state.CausePath) : null);
+
+  throw new FailError(error, cause);
+};
+
+const executeParallelJSONPath = async (state, variables, simulatorContext) => {
   const rawInput = variables.states.input;
   const stateInput = getValue(rawInput, state.InputPath);
   const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
 
-  const result = state.Result || effectiveInput;
+  const branches = state.Branches.map((branch) => {
+    const branchVariables = {
+      ...variables,
+      states: {
+        ...variables.states,
+        input: effectiveInput,
+        context: {
+          ...variables.states.context,
+          Execution: {
+            ...variables.states.context.Execution,
+            Input: effectiveInput,
+          },
+          State: {
+            ...variables.states.context.State,
+            Name: branch.StartAt,
+          },
+        },
+      },
+    };
 
-  const stateResult = getStateResult(rawInput, result, state.ResultPath);
+    return executeStateMachine(branch, branchVariables, simulatorContext);
+  });
+
+  const result = await Promise.all(branches);
+
+  const effectiveResult = applyPayloadTemplate(result, variables.states.context, state.ResultSelector);
+  const stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
   const stateOutput = getValue(stateResult, state.OutputPath);
 
   const next = state.End ? null : state.Next;
@@ -327,15 +298,56 @@ const executePass = (state, variables, _simulatorContext) => {
   return [stateOutput, next];
 };
 
-const executePassJSONata = async (state, variables, _simulatorContext) => {
-  await assign(state, variables);
+const executeMapJSONPath = async (state, variables, simulatorContext) => {
+  const rawInput = variables.states.input;
+  const stateInput = getValue(rawInput, state.InputPath);
+  const effectiveInput = applyPayloadTemplate(stateInput, variables.states.context, state.Parameters);
 
-  const output = await getJSONataOutput(state, variables);
+  const items = getValue(effectiveInput, state.ItemsPath);
+
+  const executions = items.map((Value, Index) => {
+    const itemVariables = {
+      ...variables,
+      states: {
+        ...variables.states,
+        input: Value,
+        context: {
+          ...variables.states.context,
+          Execution: {
+            ...variables.states.context.Execution,
+            Input: Value,
+          },
+          State: {
+            ...variables.states.context.State,
+            Name: state.ItemProcessor.StartAt,
+          },
+          Map: {
+            Item: {
+              Index,
+              Value,
+            },
+          },
+        },
+      },
+    };
+
+    return executeStateMachine(state.ItemProcessor, itemVariables, simulatorContext);
+  });
+
+  const result = await Promise.all(executions);
+
+  const effectiveResult = applyPayloadTemplate(result, variables.states.context, state.ResultSelector);
+  const stateResult = getStateResult(rawInput, effectiveResult, state.ResultPath);
+  const stateOutput = getValue(stateResult, state.OutputPath);
 
   const next = state.End ? null : state.Next;
 
-  return [output, next];
+  return [stateOutput, next];
 };
+
+/*
+* general
+*/
 
 const withRetry = (executor) => async (state, variables, simulatorContext) => {
   const rawInput = variables.states.input;
@@ -387,25 +399,25 @@ const withRetry = (executor) => async (state, variables, simulatorContext) => {
 };
 
 const executors = {
-  JSONPath: {
-    Fail: executeFail,
-    Succeed: executeSucceed,
-    Choice: executeChoice,
-    Parallel: withRetry(executeParallel),
-    Map: withRetry(executeMap),
-    Task: withRetry(executeTask),
-    Wait: executeWait,
-    Pass: executePass,
-  },
   JSONata: {
-    Fail: executeFailJSONata,
-    Succeed: executeSucceedJSONata,
+    Pass: executePassJSONata,
+    Task: withRetry(executeTaskJSONata),
     Choice: executeChoiceJSONata,
+    Wait: executeWaitJSONata,
+    Succeed: executeSucceedJSONata,
+    Fail: executeFailJSONata,
     Parallel: withRetry(executeParallelJSONata),
     Map: withRetry(executeMapJSONata),
-    Task: withRetry(executeTaskJSONata),
-    Wait: executeWaitJSONata,
-    Pass: executePassJSONata,
+  },
+  JSONPath: {
+    Pass: executePassJSONPath,
+    Task: withRetry(executeTaskJSONPath),
+    Choice: executeChoiceJSONPath,
+    Wait: executeWaitJSONPath,
+    Succeed: executeSucceedJSONPath,
+    Fail: executeFailJSONPath,
+    Parallel: withRetry(executeParallelJSONPath),
+    Map: withRetry(executeMapJSONPath),
   },
 };
 

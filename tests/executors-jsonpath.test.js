@@ -120,43 +120,6 @@ test('executes a Task step', async () => {
   expect(result).toEqual({ someNumber: 3 });
 });
 
-test('executes a Fail step', async () => {
-  const definition = {
-    StartAt: 'FailStep',
-    States: {
-      FailStep: {
-        Type: 'Fail',
-        Error: 'Oh no!',
-        Cause: 'Something went wrong',
-      },
-    },
-  };
-
-  const variables = getVariables(definition, {});
-  const simulatorContext = getSimulatorContext();
-
-  await expect(() => executeStateMachine(definition, variables, simulatorContext)).rejects.toThrowError(FailError);
-});
-
-test('executes a Succeed step', async () => {
-  const definition = {
-    StartAt: 'SucceedStep',
-    States: {
-      SucceedStep: {
-        Type: 'Succeed',
-      },
-    },
-  };
-
-  const input = { someString: 'hello' };
-  const variables = getVariables(definition, input);
-  const simulatorContext = getSimulatorContext();
-
-  const result = await executeStateMachine(definition, variables, simulatorContext);
-
-  expect(result).toEqual({ someString: 'hello' });
-});
-
 test('executes a Choice step', async () => {
   const definition = {
     StartAt: 'ChoiceStep',
@@ -188,6 +151,65 @@ test('executes a Choice step', async () => {
   const result = await executeStateMachine(definition, variables, simulatorContext);
 
   expect(result).toEqual({ shouldPass: true });
+});
+
+test('executes a Wait step', async () => {
+  const definition = {
+    StartAt: 'WaitStep',
+    States: {
+      WaitStep: {
+        Type: 'Wait',
+        Seconds: 5,
+        End: true,
+      },
+    },
+  };
+
+  const input = { someString: 'hello' };
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
+
+  expect(mockWait).toHaveBeenCalledWith(5, null, expect.any(Object));
+  expect(result).toEqual({ someString: 'hello' });
+});
+
+test('executes a Succeed step', async () => {
+  const definition = {
+    StartAt: 'SucceedStep',
+    States: {
+      SucceedStep: {
+        Type: 'Succeed',
+      },
+    },
+  };
+
+  const input = { someString: 'hello' };
+  const variables = getVariables(definition, input);
+  const simulatorContext = getSimulatorContext();
+
+  const result = await executeStateMachine(definition, variables, simulatorContext);
+
+  expect(result).toEqual({ someString: 'hello' });
+});
+
+test('executes a Fail step', async () => {
+  const definition = {
+    StartAt: 'FailStep',
+    States: {
+      FailStep: {
+        Type: 'Fail',
+        Error: 'Oh no!',
+        Cause: 'Something went wrong',
+      },
+    },
+  };
+
+  const variables = getVariables(definition, {});
+  const simulatorContext = getSimulatorContext();
+
+  await expect(() => executeStateMachine(definition, variables, simulatorContext)).rejects.toThrowError(FailError);
 });
 
 test('executes a Parallel step', async () => {
@@ -273,28 +295,6 @@ test('executes a Map step', async () => {
 
   expect(mockAdder).toHaveBeenCalledTimes(3);
   expect(result).toEqual([{ number: 2 }, { number: 3 }, { number: 4 }]);
-});
-
-test('executes a Wait step', async () => {
-  const definition = {
-    StartAt: 'WaitStep',
-    States: {
-      WaitStep: {
-        Type: 'Wait',
-        Seconds: 5,
-        End: true,
-      },
-    },
-  };
-
-  const input = { someString: 'hello' };
-  const variables = getVariables(definition, input);
-  const simulatorContext = getSimulatorContext();
-
-  const result = await executeStateMachine(definition, variables, simulatorContext);
-
-  expect(mockWait).toHaveBeenCalledWith(5, null, expect.any(Object));
-  expect(result).toEqual({ someString: 'hello' });
 });
 
 describe('Error handling', () => {
