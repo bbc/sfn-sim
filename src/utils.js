@@ -99,11 +99,19 @@ const evaluateJSONata = async (value, data) => {
     return evaluateJSONataString(value, data);
   }
 
-  for (const key in value) {
-    value[key] = await evaluateJSONata(value[key], data);
+  if (Array.isArray(value)) {
+    return Promise.all(value.map((entry) => evaluateJSONata(entry, data)));
   }
 
-  return value;
+  if (typeof value === 'object' && value !== null) {
+    const newValue = {};
+    for (const key in value) {
+      newValue[key] = await evaluateJSONata(value[key], data);
+    }
+    return newValue;
+  }
+
+  return value
 };
 
 const getJSONataInput = async (state, variables) => {

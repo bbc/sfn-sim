@@ -137,6 +137,8 @@ describe('evaluateJSONata', () => {
   test('evaluates nested values in objects and arrays', async () => {
     const value = {
       myString: 'my test string',
+      myNumber: 42,
+      myBoolean: true,
       myExpression: `{% ${expression} %}`,
       myObject: {
         myString: 'my test string',
@@ -150,6 +152,8 @@ describe('evaluateJSONata', () => {
 
     expect(await evaluateJSONata(value, data)).toEqual({
       myString: 'my test string',
+      myNumber: 42,
+      myBoolean: true,
       myExpression: 24,
       myObject: {
         myString: 'my test string',

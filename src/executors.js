@@ -1,7 +1,7 @@
 import { runJSONPathChoice, runJSONataChoice } from './choice.js';
 import { RuntimeError, FailError, ERROR_WILDCARD } from './errors.js';
 import runTask from './task.js';
-import { getValue, applyPayloadTemplate, getStateResult, wait, evaluateJSONata, getJSONataInput, getJSONataOutput } from './utils.js';
+import { getValue, applyPayloadTemplate, getStateResult, wait, evaluateJSONata, getJSONataInput, getJSONataOutput, assign } from './utils.js';
 
 const executeFail = (state, variables, _simulatorContext) => {
   const rawInput = variables.states.input;
@@ -294,8 +294,8 @@ const executeWait = async (state, variables, simulatorContext) => {
 };
 
 const executeWaitJSONata = async (state, variables, simulatorContext) => {
-  const seconds = await evaluateJSONata(state.Seconds, variables);
-  const timestamp = await evaluateJSONata(state.Timestamp, variables);
+  const seconds = await evaluateJSONata(state.Seconds, variables) ?? null;
+  const timestamp = await evaluateJSONata(state.Timestamp, variables) ?? null;
 
   if (!seconds && !timestamp) {
     throw new RuntimeError('No Seconds or Timestamp specified in Wait step');
@@ -417,13 +417,13 @@ const executeStateMachine = async (definition, variables, simulatorContext) => {
 
     const queryLanguage = state.QueryLanguage || simulatorContext.queryLanguage;
 
-    const executor = executors[queryLanguage][state.Type];
+    const execute = executors[queryLanguage][state.Type];
 
-    if (!executor) {
+    if (!execute) {
       throw new RuntimeError(`Unrecognised state Type ${state.Type}`);
     }
 
-    const [output, nextState] = await executor(state, variables, simulatorContext);
+    const [output, nextState] = await execute(state, variables, simulatorContext);
 
     if (!nextState) {
       return output;

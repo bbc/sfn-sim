@@ -1,5 +1,5 @@
 import { NoChoiceMatchedError, RuntimeError } from './errors.js';
-import { getJSONataOutput, getValue, assign } from './utils.js';
+import { evaluateJSONata, getJSONataOutput, getValue, assign } from './utils.js';
 
 const runJSONPathChoice = (state, input) => {
   for (const choice of state.Choices) {
@@ -17,7 +17,7 @@ const runJSONPathChoice = (state, input) => {
 
 const runJSONataChoice = async (state, variables) => {
   for (const choice of state.Choices) {
-    if (await evaluateJSONata(choice.Condition), variables) {
+    if (await evaluateJSONata(choice.Condition, variables)) {
       await assign(choice, variables);
 
       const output = getJSONataOutput(choice, variables);
