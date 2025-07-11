@@ -9,6 +9,14 @@ const runTask = async (state, simulatorContext, input) => {
     return runLambdaTask(functionName, resources, input);
   }
 
+  if (['arn:aws:states:::lambda:invoke', 'arn:aws:states:::aws-sdk:lambda:invoke'].includes(state.Resource)) {
+    let functionName = input.FunctionName;
+    if (functionName.startsWith('arn:')) {
+      functionName = functionName.split(':')[6];
+    }
+    return runLambdaTask(functionName, resources, input.Payload);
+  }
+
   if (state.Resource.startsWith('arn:aws:states:::aws-sdk:s3:')) {
     const action = state.Resource.split(':').pop();
     return runS3Task(action, resources, input);
