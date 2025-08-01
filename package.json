@@ -10,7 +10,10 @@
   ],
   "author": "Ben Wormald <ben.wormald@bbc.co.uk>",
   "license": "ISC",
-  "repository": "github:bbc/sfn-sim",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/bbc/sfn-sim.git"
+  },
   "main": "src/index.js",
   "types": "src/index.d.ts",
   "type": "module",
