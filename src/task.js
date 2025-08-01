@@ -1,12 +1,20 @@
 import { v4 as uuidV4 } from 'uuid';
 import { TaskFailedError, SimulatorError } from './errors.js';
 
-const runTask = async (state, data, input) => {
-  const { resources } = data;
+const runTask = async (state, simulatorContext, input) => {
+  const { resources } = simulatorContext;
 
   if (state.Resource.startsWith('arn:aws:lambda:')) {
     const functionName = state.Resource.split(':')[6];
     return runLambdaTask(functionName, resources, input);
+  }
+
+  if (['arn:aws:states:::lambda:invoke', 'arn:aws:states:::aws-sdk:lambda:invoke'].includes(state.Resource)) {
+    let functionName = input.FunctionName;
+    if (functionName.startsWith('arn:')) {
+      functionName = functionName.split(':')[6];
+    }
+    return runLambdaTask(functionName, resources, input.Payload);
   }
 
   if (state.Resource.startsWith('arn:aws:states:::aws-sdk:s3:')) {

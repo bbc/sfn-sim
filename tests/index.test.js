@@ -31,12 +31,20 @@ describe('execution', () => {
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       definition,
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            Input: { someString: 'hello' },
+        states: expect.objectContaining({
+          input: { someString: 'hello' },
+          context: expect.objectContaining({
+            Execution: expect.objectContaining({
+              Input: { someString: 'hello' },
+            }),
           }),
         }),
       }),
+      {
+        resources: expect.any(Array),
+        options: expect.any(Object),
+        queryLanguage: expect.any(String),
+      },
     );
     expect(result).toEqual({ someOutput: 'goodbye' });
   });
@@ -57,14 +65,52 @@ describe('execution', () => {
     expect(mockExecuteStateMachine).toHaveBeenCalledWith(
       definition,
       expect.objectContaining({
-        context: expect.objectContaining({
-          Execution: expect.objectContaining({
-            Name: 'test-execution',
-          }),
-          StateMachine: expect.objectContaining({
-            Name: 'test-state-machine',
+        states: expect.objectContaining({
+          context: expect.objectContaining({
+            Execution: expect.objectContaining({
+              Name: 'test-execution',
+            }),
+            StateMachine: expect.objectContaining({
+              Name: 'test-state-machine',
+            }),
           }),
         }),
+      }),
+      expect.any(Object),
+    );
+  });
+
+  test('query language defaults to JSONPath', async () => {
+    mockExecuteStateMachine.mockResolvedValueOnce((input) => input);
+
+    const stateMachine = load(definition);
+    await stateMachine.execute({ someString: 'hello' });
+
+    expect(mockExecuteStateMachine).toHaveBeenCalledWith(
+      definition,
+      expect.any(Object),
+      expect.objectContaining({
+        queryLanguage: 'JSONPath',
+      }),
+    );
+  });
+
+  test('query language can be set to JSONata', async () => {
+    mockExecuteStateMachine.mockResolvedValueOnce((input) => input);
+
+    const jsonataDefinition = {
+      ...definition,
+      QueryLanguage: 'JSONata',
+    };
+
+    const stateMachine = load(jsonataDefinition, [], { validateDefinition: false });
+    await stateMachine.execute({ someString: 'hello' });
+
+    expect(mockExecuteStateMachine).toHaveBeenCalledWith(
+      jsonataDefinition,
+      expect.any(Object),
+      expect.objectContaining({
+        queryLanguage: 'JSONata',
       }),
     );
   });

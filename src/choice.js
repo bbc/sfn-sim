@@ -1,7 +1,7 @@
 import { NoChoiceMatchedError, RuntimeError } from './errors.js';
-import { getValue } from './utils.js';
+import { evaluateJSONata, getJSONataOutput, getValue, assign } from './utils.js';
 
-const runChoice = (state, _data, input) => {
+const runJSONPathChoice = (state, input) => {
   for (const choice of state.Choices) {
     if (evaluateChoiceRule(choice, input)) {
       return choice.Next;
@@ -10,6 +10,28 @@ const runChoice = (state, _data, input) => {
 
   if (state.Default) {
     return state.Default;
+  }
+
+  throw new NoChoiceMatchedError();
+};
+
+const runJSONataChoice = async (state, variables) => {
+  for (const choice of state.Choices) {
+    if (await evaluateJSONata(choice.Condition, variables)) {
+      await assign(choice, variables);
+
+      const output = getJSONataOutput(choice, variables);
+
+      return [output, choice.Next];
+    }
+  }
+
+  if (state.Default) {
+    await assign(state, variables);
+
+    const output = getJSONataOutput(state, variables);
+
+    return [output, state.Default];
   }
 
   throw new NoChoiceMatchedError();
@@ -129,8 +151,8 @@ const evaluateChoiceRule = (choice, input) => {
   throw new RuntimeError('Choice does not contain a data-test expression');
 };
 
-export default runChoice;
-
 export {
+  runJSONPathChoice,
+  runJSONataChoice,
   evaluateChoiceRule,
 };

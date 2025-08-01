@@ -6,11 +6,139 @@ describe('lambda', () => {
   describe('invoke (optimised integration)', () => {
     const state = {
       Type: 'Task',
+      Resource: 'arn:aws:states:::lambda:invoke',
+      Parameters: {
+        FunctionName: 'arn:aws:lambda:::function:my-function',
+        Payload: {
+          number: 1,
+        },
+      },
+      End: true,
+    };
+
+    test('invokes a function with a function ARN', async () => {
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+
+      const data = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
+          },
+        ],
+      };
+
+      const result = await runTask(state, data, state.Parameters);
+
+      expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+
+    test('invokes a function with an alias ARN', async () => {
+      const stateWithAlias = {
+        ...state,
+        Parameters: {
+          ...state.Parameters,
+          FunctionName: 'arn:aws:lambda:::function:my-function:latest',
+        },
+      };
+
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+
+      const data = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
+          },
+        ],
+      };
+
+      const result = await runTask(stateWithAlias, data, state.Parameters);
+
+      expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+
+    test('invokes a function with a function name', async () => {
+      const stateWithName = {
+        ...state,
+        Parameters: {
+          ...state.Parameters,
+          FunctionName: 'my-function',
+        },
+      };
+
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+
+      const data = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
+          },
+        ],
+      };
+
+      const result = await runTask(stateWithName, data, state.Parameters);
+
+      expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+  });
+
+  describe('invoke (SDK integration)', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::aws-sdk:lambda:invoke',
+      Parameters: {
+        FunctionName: 'arn:aws:lambda:::function:my-function',
+        Payload: {
+          number: 1,
+        },
+      },
+      End: true,
+    };
+
+    test('invokes a function', async () => {
+      const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+
+      const data = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: mockFunction,
+          },
+        ],
+      };
+
+      const result = await runTask(state, data, state.Parameters);
+
+      expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
+      expect(result).toEqual({
+        number: 2,
+      });
+    });
+  });
+
+  describe('invoke (older optimised integration)', () => {
+    const state = {
+      Type: 'Task',
       Resource: 'arn:aws:lambda:::function:my-function',
       End: true,
     };
 
-    test('runs a function with a function ARN', async () => {
+    test('invokes a function with a function ARN', async () => {
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
       const data = {
@@ -35,7 +163,7 @@ describe('lambda', () => {
       });
     });
 
-    test('runs a function with an alias ARN', async () => {
+    test('invokes a function with an alias ARN', async () => {
       const stateWithAlias = {
         ...state,
         Resource: 'arn:aws:lambda:::function:my-function:some-alias',
@@ -64,6 +192,18 @@ describe('lambda', () => {
         number: 2,
       });
     });
+  });
+
+  describe('error handling', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::lambda:invoke',
+      Parameters: {
+        FunctionName: 'arn:aws:lambda:::function:my-function',
+        Payload: {},
+      },
+      End: true,
+    };
 
     test('throws a States.TaskFailed error if the function is not found', async () => {
       const data = {
@@ -78,7 +218,7 @@ describe('lambda', () => {
 
       const expectedError = new TaskFailedError('Lambda function [my-function] not found');
 
-      await expect(() => runTask(state, data, {})).rejects.toThrowError(expectedError);
+      await expect(() => runTask(state, data, state.Parameters)).rejects.toThrowError(expectedError);
     });
 
     test('throws a States.TaskFailed error if the function throws an error', async () => {
@@ -96,9 +236,9 @@ describe('lambda', () => {
 
       const expectedError = new TaskFailedError('Error: Lambda runtime error');
 
-      await expect(() => runTask(state, data, {})).rejects.toThrowError(expectedError);
+      await expect(() => runTask(state, data, state.Parameters)).rejects.toThrowError(expectedError);
     });
-  })
+  });
 });
 
 describe('s3', () => {
@@ -431,7 +571,7 @@ describe('stepFunctions', () => {
           Resource: 'arn:aws:states:::states:startExecution.sync:2',
           End: true,
         };
-  
+
         const mockStateMachine = vi.fn((input) => ({ ...input, resultKey: 'resultValue' }));
         const data = {
           resources: [
@@ -442,16 +582,16 @@ describe('stepFunctions', () => {
             },
           ],
         };
-  
+
         const input = {
           StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
           Input: {
             someKey: 'someValue',
           },
         };
-  
+
         const result = await runTask(state, data, input);
-  
+
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result).toEqual(expect.objectContaining({
           Output: {
@@ -498,7 +638,7 @@ describe('stepFunctions', () => {
           Resource: 'arn:aws:states:::states:startExecution',
           End: true,
         };
-  
+
         const mockStateMachine = vi.fn();
         const data = {
           resources: [
@@ -509,14 +649,14 @@ describe('stepFunctions', () => {
             },
           ],
         };
-  
+
         const input = {
           StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
           Input: { someKey: 'someValue' },
         };
-  
+
         const result = await runTask(state, data, input);
-  
+
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result).toEqual(expect.objectContaining({
           SdkHttpMetadata: expect.objectContaining({
@@ -527,7 +667,7 @@ describe('stepFunctions', () => {
       });
 
       test('handles a state machine failing', async () => {
-        vi.spyOn(console, 'debug').mockImplementation(() => {});
+        vi.spyOn(console, 'debug').mockImplementation(() => { });
 
         const state = {
           Type: 'Task',
@@ -552,9 +692,9 @@ describe('stepFunctions', () => {
           StateMachineArn: 'arn:aws:states:::stateMachine:my-state-machine',
           Input: { someKey: 'someValue' },
         };
-  
+
         const result = await runTask(state, data, input);
-  
+
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result.SdkHttpMetadata.HttpStatusCode).toBe(200);
       });

@@ -1,8 +1,8 @@
 import { test, expect, describe } from 'vitest';
-import runChoice, { evaluateChoiceRule } from '../src/choice.js';
+import { runJSONPathChoice, evaluateChoiceRule } from '../src/choice.js';
 import { NoChoiceMatchedError, RuntimeError } from '../src/errors.js';
 
-describe('runChoice', () => {
+describe('runJSONPathChoice', () => {
   test('returns a matched step from the given Choices', () => {
     const state = {
       Type: 'Choice',
@@ -20,7 +20,7 @@ describe('runChoice', () => {
       someString: 'Hello!',
     };
 
-    const nextState = runChoice(state, {}, input);
+    const nextState = runJSONPathChoice(state, input);
 
     expect(nextState).toEqual('MatchedStep');
   });
@@ -42,7 +42,7 @@ describe('runChoice', () => {
       someString: 'Goodbye!',
     };
 
-    const nextState = runChoice(state, {}, input);
+    const nextState = runJSONPathChoice(state, input);
 
     expect(nextState).toEqual('DefaultStep');
   });
@@ -63,7 +63,7 @@ describe('runChoice', () => {
       someString: 'Goodbye!',
     };
 
-    expect(() => runChoice(state, {}, input)).toThrowError(NoChoiceMatchedError);
+    expect(() => runJSONPathChoice(state, input)).toThrowError(NoChoiceMatchedError);
   });
 });
 

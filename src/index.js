@@ -3,6 +3,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { ValidationError } from './errors.js';
 import { defaultOptions } from './options.js';
 import { executeStateMachine } from './executors.js';
+import { getTaskToken } from './utils.js';
 
 const load = (definition, resources = [], overrideOptions = {}) => {
   const { executionName, stateMachineName, ...otherOverrideOptions } = overrideOptions;
@@ -23,13 +24,18 @@ const load = (definition, resources = [], overrideOptions = {}) => {
   }
 
   return {
-    execute: (Input) => {
+    execute: (input) => {
+      const queryLanguage = definition.QueryLanguage || 'JSONPath';
+
+      const Token = getTaskToken();
+
       const context = {
         Execution: {
           Id: uuidV4(),
-          Input,
+          Input: input,
           Name: executionName,
           StartTime: new Date().toISOString(),
+          RedriveCount: 0,
         },
         State: {
           Name: definition.StartAt,
@@ -38,12 +44,21 @@ const load = (definition, resources = [], overrideOptions = {}) => {
           Id: uuidV4(),
           Name: stateMachineName,
         },
-        Task: {},
+        Task: {
+          Token,
+        },
       };
 
-      const data = { resources, options, context };
+      const variables = {
+        states: {
+          input,
+          context,
+        },
+      };
 
-      return executeStateMachine(definition, data);
+      const simulatorContext = { resources, options, queryLanguage };
+
+      return executeStateMachine(definition, variables, simulatorContext);
     },
   };
 };
