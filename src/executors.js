@@ -34,7 +34,7 @@ const executeTaskJSONata = async (state, variables, simulatorContext) => {
 
   await assign(state, taskVariables);
 
-  const output = await getJSONataOutput(state, taskVariables);
+  const output = await getJSONataOutput(state, taskVariables, Payload);
 
   const next = state.End ? null : state.Next;
 

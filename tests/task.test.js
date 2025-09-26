@@ -19,7 +19,7 @@ describe('lambda', () => {
     test('invokes a function with a function ARN', async () => {
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -29,7 +29,7 @@ describe('lambda', () => {
         ],
       };
 
-      const result = await runTask(state, data, state.Parameters);
+      const result = await runTask(state, simulatorContext, state.Parameters);
 
       expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
       expect(result).toEqual({
@@ -48,7 +48,7 @@ describe('lambda', () => {
 
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -58,7 +58,7 @@ describe('lambda', () => {
         ],
       };
 
-      const result = await runTask(stateWithAlias, data, state.Parameters);
+      const result = await runTask(stateWithAlias, simulatorContext, state.Parameters);
 
       expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
       expect(result).toEqual({
@@ -77,7 +77,7 @@ describe('lambda', () => {
 
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -87,7 +87,7 @@ describe('lambda', () => {
         ],
       };
 
-      const result = await runTask(stateWithName, data, state.Parameters);
+      const result = await runTask(stateWithName, simulatorContext, state.Parameters);
 
       expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
       expect(result).toEqual({
@@ -112,7 +112,7 @@ describe('lambda', () => {
     test('invokes a function', async () => {
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -122,7 +122,7 @@ describe('lambda', () => {
         ],
       };
 
-      const result = await runTask(state, data, state.Parameters);
+      const result = await runTask(state, simulatorContext, state.Parameters);
 
       expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
       expect(result).toEqual({
@@ -141,7 +141,7 @@ describe('lambda', () => {
     test('invokes a function with a function ARN', async () => {
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -155,7 +155,7 @@ describe('lambda', () => {
         number: 1,
       };
 
-      const result = await runTask(state, data, input);
+      const result = await runTask(state, simulatorContext, input);
 
       expect(mockFunction).toHaveBeenCalledWith(input);
       expect(result).toEqual({
@@ -171,7 +171,7 @@ describe('lambda', () => {
 
       const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
 
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -185,7 +185,7 @@ describe('lambda', () => {
         number: 1,
       };
 
-      const result = await runTask(stateWithAlias, data, input);
+      const result = await runTask(stateWithAlias, simulatorContext, input);
 
       expect(mockFunction).toHaveBeenCalledWith(input);
       expect(result).toEqual({
@@ -206,7 +206,7 @@ describe('lambda', () => {
     };
 
     test('throws a States.TaskFailed error if the function is not found', async () => {
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -218,11 +218,11 @@ describe('lambda', () => {
 
       const expectedError = new TaskFailedError('Lambda function [my-function] not found');
 
-      await expect(() => runTask(state, data, state.Parameters)).rejects.toThrowError(expectedError);
+      await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
     });
 
     test('throws a States.TaskFailed error if the function throws an error', async () => {
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'lambda',
@@ -236,7 +236,7 @@ describe('lambda', () => {
 
       const expectedError = new TaskFailedError('Error: Lambda runtime error');
 
-      await expect(() => runTask(state, data, state.Parameters)).rejects.toThrowError(expectedError);
+      await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
     });
   });
 });
@@ -250,7 +250,7 @@ describe('s3', () => {
     };
 
     test('gets an object from a bucket', async () => {
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 's3',
@@ -270,7 +270,7 @@ describe('s3', () => {
         Key: 'my-object',
       };
 
-      const result = await runTask(state, data, input);
+      const result = await runTask(state, simulatorContext, input);
 
       expect(result).toEqual({
         Body: 'someString',
@@ -278,7 +278,7 @@ describe('s3', () => {
     });
 
     test('throws a State.TaskFailed error if the object is not found', async () => {
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 's3',
@@ -300,7 +300,7 @@ describe('s3', () => {
 
       const expectedError = new TaskFailedError('No object in bucket [my-bucket] with key [my-object]');
 
-      await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+      await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
     });
   });
 
@@ -313,7 +313,7 @@ describe('s3', () => {
 
     test('puts an object in a bucket', async () => {
       const objects = [];
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 's3',
@@ -329,7 +329,7 @@ describe('s3', () => {
         Body: 'someString',
       };
 
-      await runTask(state, data, input);
+      await runTask(state, simulatorContext, input);
 
       expect(objects).toContainEqual({
         key: 'my-object',
@@ -345,7 +345,7 @@ describe('s3', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 's3',
@@ -362,7 +362,7 @@ describe('s3', () => {
 
     const expectedError = new TaskFailedError('S3 bucket [my-bucket] not found');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 
   test('throws a SimulatorError error if the action is not supported', async () => {
@@ -372,7 +372,7 @@ describe('s3', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 's3',
@@ -388,7 +388,7 @@ describe('s3', () => {
 
     const expectedError = new SimulatorError('Unimplemented action [fillBucket] for service [s3]');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 });
 
@@ -402,7 +402,7 @@ describe('sns', () => {
 
     test('publishes a message to a topic', async () => {
       const messages = [];
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'sns',
@@ -417,7 +417,7 @@ describe('sns', () => {
         Message: 'someString',
       };
 
-      await runTask(state, data, input);
+      await runTask(state, simulatorContext, input);
 
       expect(messages).toContain('someString');
     });
@@ -430,7 +430,7 @@ describe('sns', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'sns',
@@ -447,7 +447,7 @@ describe('sns', () => {
 
     const expectedError = new TaskFailedError('SNS topic [my-topic] not found');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 
   test('throws a SimulatorError error if the action is not supported', async () => {
@@ -457,7 +457,7 @@ describe('sns', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'sns',
@@ -473,7 +473,7 @@ describe('sns', () => {
 
     const expectedError = new SimulatorError('Unimplemented action [unpublish] for service [sns]');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 });
 
@@ -487,7 +487,7 @@ describe('sqs', () => {
 
     test('sends a message to a queue', async () => {
       const messages = [];
-      const data = {
+      const simulatorContext = {
         resources: [
           {
             service: 'sqs',
@@ -502,7 +502,7 @@ describe('sqs', () => {
         MessageBody: 'someString',
       };
 
-      await runTask(state, data, input);
+      await runTask(state, simulatorContext, input);
 
       expect(messages).toContain('someString');
     });
@@ -515,7 +515,7 @@ describe('sqs', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'sqs',
@@ -532,7 +532,7 @@ describe('sqs', () => {
 
     const expectedError = new TaskFailedError('SQS queue [my-queue] not found');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 
   test('throws a SimulatorError error if the action is not supported', async () => {
@@ -542,7 +542,7 @@ describe('sqs', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'sqs',
@@ -558,7 +558,7 @@ describe('sqs', () => {
 
     const expectedError = new SimulatorError('Unimplemented action [unsendMessage] for service [sqs]');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 });
 
@@ -573,7 +573,7 @@ describe('stepFunctions', () => {
         };
 
         const mockStateMachine = vi.fn((input) => ({ ...input, resultKey: 'resultValue' }));
-        const data = {
+        const simulatorContext = {
           resources: [
             {
               service: 'stepFunctions',
@@ -590,7 +590,7 @@ describe('stepFunctions', () => {
           },
         };
 
-        const result = await runTask(state, data, input);
+        const result = await runTask(state, simulatorContext, input);
 
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result).toEqual(expect.objectContaining({
@@ -612,7 +612,7 @@ describe('stepFunctions', () => {
         const mockStateMachine = vi.fn(() => {
           throw new Error('oh no!');
         });
-        const data = {
+        const simulatorContext = {
           resources: [
             {
               service: 'stepFunctions',
@@ -627,7 +627,7 @@ describe('stepFunctions', () => {
           Input: { someKey: 'someValue' },
         };
 
-        await expect(() => runTask(state, data, input)).rejects.toThrowError(TaskFailedError);
+        await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(TaskFailedError);
       });
     });
 
@@ -640,7 +640,7 @@ describe('stepFunctions', () => {
         };
 
         const mockStateMachine = vi.fn();
-        const data = {
+        const simulatorContext = {
           resources: [
             {
               service: 'stepFunctions',
@@ -655,7 +655,7 @@ describe('stepFunctions', () => {
           Input: { someKey: 'someValue' },
         };
 
-        const result = await runTask(state, data, input);
+        const result = await runTask(state, simulatorContext, input);
 
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result).toEqual(expect.objectContaining({
@@ -678,7 +678,7 @@ describe('stepFunctions', () => {
         const mockStateMachine = vi.fn(() => {
           throw new Error('oh no!');
         });
-        const data = {
+        const simulatorContext = {
           resources: [
             {
               service: 'stepFunctions',
@@ -693,7 +693,7 @@ describe('stepFunctions', () => {
           Input: { someKey: 'someValue' },
         };
 
-        const result = await runTask(state, data, input);
+        const result = await runTask(state, simulatorContext, input);
 
         expect(mockStateMachine).toHaveBeenCalledOnce();
         expect(result.SdkHttpMetadata.HttpStatusCode).toBe(200);
@@ -708,7 +708,7 @@ describe('stepFunctions', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'stepFunctions',
@@ -725,7 +725,7 @@ describe('stepFunctions', () => {
 
     const expectedError = new TaskFailedError('State machine [my-state-machine] not found');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
   });
 
   test('throws a SimulatorError error if the action is not supported', async () => {
@@ -735,7 +735,7 @@ describe('stepFunctions', () => {
       End: true,
     };
 
-    const data = {
+    const simulatorContext = {
       resources: [
         {
           service: 'stepFunctions',
@@ -752,7 +752,82 @@ describe('stepFunctions', () => {
 
     const expectedError = new SimulatorError('Unimplemented action [stopExecution] for service [stepFunctions]');
 
-    await expect(() => runTask(state, data, input)).rejects.toThrowError(expectedError);
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
+  });
+});
+
+describe('wait for task token', () => {
+  const state = {
+    Type: 'Task',
+    Resource: 'arn:aws:states:::lambda:invoke.waitForTaskToken',
+    Parameters: {
+      FunctionName: 'arn:aws:lambda:::function:my-function',
+      Payload: {
+        number: 1,
+      },
+    },
+    End: true,
+  };
+
+  test('invokes a lambda function with wait for task token', async () => {
+    const mockFunction = vi.fn((input) => ({ number: input.number + 1 }));
+    const mockTaskCallback = vi.fn(() => ({ myTaskResult: 'success' }));
+
+    const simulatorContext = {
+      resources: [
+        {
+          service: 'lambda',
+          name: 'my-function',
+          function: mockFunction,
+          taskCallback: mockTaskCallback,
+        },
+      ],
+    };
+
+    const result = await runTask(state, simulatorContext, state.Parameters);
+
+    expect(mockFunction).toHaveBeenCalledWith(state.Parameters.Payload);
+    expect(mockTaskCallback).toHaveBeenCalledWith(state.Parameters, {
+      number: 2,
+    });
+    expect(result).toEqual({
+      myTaskResult: 'success',
+    });
+  });
+
+  test('throws a TaskFailedError if the task callback fails', async () => {
+    const simulatorContext = {
+      resources: [
+        {
+          service: 'lambda',
+          name: 'my-function',
+          function: (input) => ({ number: input.number + 1 }),
+          taskCallback: () => {
+            throw new Error('oh no!');
+          },
+        },
+      ],
+    };
+
+    await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(
+      new TaskFailedError('Error: oh no!'),
+    );
+  });
+
+  test('throws a SimulatorError if no task callback is provided', async () => {
+    const simulatorContext = {
+      resources: [
+        {
+          service: 'lambda',
+          name: 'my-function',
+          function: (input) => ({ number: input.number + 1 }),
+        },
+      ],
+    };
+
+    await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(
+      new SimulatorError('No taskCallback provided for [lambda] resource [my-function]'),
+    );
   });
 });
 
@@ -763,11 +838,11 @@ test('throws a SimulatorError error if an unimplemented resource is specified', 
     End: true,
   };
 
-  const data = {
+  const simulatorContext = {
     resources: [],
   };
 
   const expectedError = new SimulatorError('Unimplemented resource [arn:aws:bananas:::banana:🍌]');
 
-  await expect(() => runTask(state, data, {})).rejects.toThrowError(expectedError);
+  await expect(() => runTask(state, simulatorContext, {})).rejects.toThrowError(expectedError);
 });
