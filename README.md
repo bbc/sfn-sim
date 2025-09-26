@@ -132,6 +132,61 @@ test('writes a squared number to S3', async () => {
 ```
 
 
+## Wait for task token
+
+The simulator supports Task steps that use the [Wait for a Callback with Task Token](https://docs.aws.amazon.com/step-functions/latest/dg/connect-to-resource.html#connect-wait-token)
+pattern.
+
+When the `Resource` field of a Task step is suffixed with `.waitForTaskToken`, the corresponding
+resource you provide to the simulator must include a `taskCallback` function. This function receives
+the Task's input and output as arguments, and its return value is used as the final result of the
+Task. The `taskCallback` function may throw an error to simulate notifying the state machine of task
+failure.
+
+
+### Wait for task token example
+
+```js
+const definition = {
+  QueryLanguage: 'JSONata',
+  StartAt: 'AsyncAdd',
+  States: {
+    AsyncAdd: {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::lambda:invoke.waitForTaskToken',
+      Arguments: {
+        FunctionName: 'start-async-add',
+        Payload: {
+          number: 1,
+          taskToken: '{% $states.context.Task.Token %}',
+        },
+      },
+      End: true,
+    },
+  },
+};
+
+const resources = [
+  {
+    service: 'lambda',
+    name: 'start-async-add',
+    function: (input) => ({ number: input.number + 1 }),
+    taskCallback: (_taskInput, taskOutput) => ({ number: taskOutput.number + 1 }),
+  },
+];
+
+const stateMachine = load(definition, resources, { validateDefinition: false });
+
+test('waits for async task completion', async () => {
+  const result = await stateMachine.execute();
+
+  expect(result).toEqual({
+    number: 3,
+  });
+});
+```
+
+
 ## `options`
 
 This should be an object which can be used to override the default configuration of the simulator.
@@ -151,4 +206,3 @@ implemented yet, including:
 
 * Some AWS resources in `Task` steps
 * Some runtime error handling and data validation
-* Waiting for completion with task tokens

@@ -1,5 +1,5 @@
 export interface StateMachine {
-  execute: (input: object) => object;
+  execute: (input: object) => Promise<object>;
 }
 
 export interface Options {
@@ -12,11 +12,12 @@ export interface Options {
 export interface Resource {
   service: string;
   name: string;
+  taskCallback?: (taskInput: object, taskOutput: object) => Promise<object>;
 }
 
-export interface LambdaResource implements Resource {
+export interface LambdaResource extends Resource {
   service: 'lambda';
-  function: (input: object) => object;
+  function: (input: object) => Promise<object>;
 }
 
 export interface S3Object {
@@ -24,24 +25,24 @@ export interface S3Object {
   body: string;
 }
 
-export interface S3Resource implements Resource {
+export interface S3Resource extends Resource {
   service: 's3';
   objects: S3Object[];
 }
 
-export interface SNSResource implements Resource {
+export interface SNSResource extends Resource {
   service: 'sns';
   messages: string[];
 }
 
-export interface SQSResource implements Resource {
+export interface SQSResource extends Resource {
   service: 'sqs';
   messages: string[];
 }
 
-export interface StepFunctionsResource implements Resource {
+export interface StepFunctionsResource extends Resource {
   service: 'stepFunctions';
-  stateMachine: (input: object) => object;
+  stateMachine: (input: object) => Promise<object>;
 }
 
 export declare function load(definition: object, resources?: Resource[], overrideOptions?: Options): StateMachine;
