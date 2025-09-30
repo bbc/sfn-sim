@@ -1,5 +1,5 @@
 export interface StateMachine {
-  execute: (input: object) => Promise<object>;
+  execute: (input?: object) => Promise<object>;
 }
 
 export interface Options {

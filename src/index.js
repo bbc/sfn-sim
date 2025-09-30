@@ -24,7 +24,7 @@ const load = (definition, resources = [], overrideOptions = {}) => {
   }
 
   return {
-    execute: (input) => {
+    execute: (input = {}) => {
       const queryLanguage = definition.QueryLanguage || 'JSONPath';
 
       const Token = getTaskToken();
