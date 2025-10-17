@@ -133,8 +133,8 @@ const getJSONataOutput = async (state, variables, defaultOutput = null) => {
 
 const assign = async (state, variables) => {
   if (state.Assign) {
-
     const assignment = await evaluateJSONata(state.Assign, variables);
+
     for (const variable in assignment) {
       if (variable === 'states') {
         continue;

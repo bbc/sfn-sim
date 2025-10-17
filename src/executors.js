@@ -20,21 +20,13 @@ const executePassJSONata = async (state, variables, _simulatorContext) => {
 const executeTaskJSONata = async (state, variables, simulatorContext) => {
   const input = await getJSONataInput(state, variables);
 
-  const Payload = await runTask(state, simulatorContext, input);
+  const result = await runTask(state, simulatorContext, input, 'JSONata');
 
-  const taskVariables = {
-    ...variables,
-    states: {
-      ...variables.states,
-      result: {
-        Payload,
-      },
-    },
-  };
+  variables.states.result = result;
 
-  await assign(state, taskVariables);
+  await assign(state, variables);
 
-  const output = await getJSONataOutput(state, taskVariables, Payload);
+  const output = await getJSONataOutput(state, variables, result);
 
   const next = state.End ? null : state.Next;
 
@@ -103,6 +95,8 @@ const executeParallelJSONata = async (state, variables, simulatorContext) => {
 
   const result = await Promise.all(branches);
 
+  variables.states.result = result;
+
   await assign(state, variables);
 
   const output = await getJSONataOutput(state, variables, result);
@@ -150,17 +144,11 @@ const executeMapJSONata = async (state, variables, simulatorContext) => {
 
   const result = await Promise.all(executions);
 
-  const mapVariables = {
-    ...variables,
-    states: {
-      ...variables.states,
-      result,
-    },
-  };
+  variables.states.result = result;
 
-  await assign(state, mapVariables);
+  await assign(state, variables);
 
-  const output = await getJSONataOutput(state, mapVariables, result);
+  const output = await getJSONataOutput(state, variables, result);
 
   const next = state.End ? null : state.Next;
 
@@ -420,6 +408,8 @@ const executeStateMachine = async (definition, variables, simulatorContext) => {
     }
 
     const [output, nextState] = await execute(state, variables, simulatorContext);
+
+    variables.states.result = undefined;
 
     if (!nextState) {
       return output;

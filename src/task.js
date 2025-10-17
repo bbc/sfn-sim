@@ -1,13 +1,13 @@
 import { v4 as uuidV4 } from 'uuid';
 import { TaskFailedError, SimulatorError } from './errors.js';
 
-const runTask = async (state, resource, input) => {
+const runTask = async (state, resource, input, queryLanguage) => {
   if (state.Resource.startsWith('arn:aws:lambda:')) {
-    return runLambdaTask(resource, input);
+    return runLambdaTask(resource, input, queryLanguage);
   }
 
   if (['arn:aws:states:::lambda:invoke', 'arn:aws:states:::aws-sdk:lambda:invoke'].includes(state.Resource)) {
-    return runLambdaTask(resource, input.Payload);
+    return runLambdaTask(resource, input.Payload, queryLanguage);
   }
 
   if (state.Resource.startsWith('arn:aws:states:::aws-sdk:s3:')) {
@@ -111,9 +111,10 @@ const getResource = (state, simulatorContext, input) => {
   throw new SimulatorError(`Unimplemented resource [${state.Resource}]`);
 };
 
-const runLambdaTask = async (resource, input) => {
+const runLambdaTask = async (resource, input, queryLanguage) => {
   try {
-    return resource.function(input);
+    const Payload = await resource.function(input);
+    return queryLanguage === 'JSONata' ? { Payload } : Payload;
   } catch (error) {
     throw new TaskFailedError(error);
   }
@@ -227,7 +228,7 @@ const runStepFunctionsTask = async (action, resource, input) => {
   throw new SimulatorError(`Unimplemented action [${action}] for service [stepFunctions]`);
 };
 
-const runTaskWithWaitForTaskToken = async (state, simulatorContext, input) => {
+const runTaskWithWaitForTaskToken = async (state, simulatorContext, input, queryLanguage = 'JSONPath') => {
   const suffix = '.waitForTaskToken';
   let stateResource = state.Resource;
   let hasWaitForTaskToken = false;
@@ -245,7 +246,7 @@ const runTaskWithWaitForTaskToken = async (state, simulatorContext, input) => {
   const resource = getResource(taskState, simulatorContext, input);
 
   if (hasWaitForTaskToken) {
-    const taskOutput = await runTask(taskState, resource, input);
+    const taskOutput = await runTask(taskState, resource, input, queryLanguage);
 
     if (!resource.taskCallback) {
       throw new SimulatorError(`No taskCallback provided for [${resource.service}] resource [${resource.name}]`);
@@ -258,7 +259,7 @@ const runTaskWithWaitForTaskToken = async (state, simulatorContext, input) => {
       throw new TaskFailedError(error);
     }
   } else {
-    return runTask(state, resource, input);
+    return runTask(state, resource, input, queryLanguage);
   }
 };
 
