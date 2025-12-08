@@ -58,6 +58,7 @@ describe('applyPayloadTemplate', () => {
       nested: {
         'inputTwo.$': '$.two',
       },
+      'wholeInput.$': '$',
       'context.$': '$$.StateMachine.Name',
       'intrinsic.$': 'States.StringToJson($.someObjectString)',
     };
@@ -69,6 +70,11 @@ describe('applyPayloadTemplate', () => {
       inputOne: 1,
       nested: {
         inputTwo: 2,
+      },
+      wholeInput: {
+        one: 1,
+        two: 2,
+        someObjectString: '{ "someKey": "someValue" }',
       },
       context: 'cool-state-machine',
       intrinsic: {

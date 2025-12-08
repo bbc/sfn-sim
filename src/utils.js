@@ -36,7 +36,7 @@ const getPayload = (input, context, payloadTemplate) => {
       if (key.endsWith('.$')) {
         const payloadKey = key.replace('.$', '');
 
-        if (payloadTemplate[key].startsWith('$.')) {
+        if (payloadTemplate[key].startsWith('$.') || payloadTemplate[key] == '$') {
           payload[payloadKey] = getValue(input, payloadTemplate[key]);
         } else if (payloadTemplate[key].startsWith('$$.')) {
           payload[payloadKey] = getValue(context, payloadTemplate[key].replace('$$.', '$.'));
