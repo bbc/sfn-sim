@@ -3,6 +3,7 @@ import { v4 as uuidV4 } from 'uuid';
 import { FailError, TaskFailedError } from '../src/errors.js';
 import { executeStateMachine } from '../src/executors.js';
 import { defaultOptions } from '../src/options.js';
+import MockCustomError from './custom-error.js'
 
 const mockWait = vi.hoisted(() => vi.fn());
 
@@ -485,6 +486,56 @@ describe('Error handling', () => {
     expect(result).toEqual({
       Error: 'States.TaskFailed',
       Cause: 'Error: Oh no!'
+    });
+  });
+
+  test('catches a custom error', async () => {
+    const definition = {
+      QueryLanguage: 'JSONata',
+      StartAt: 'TaskStep',
+      States: {
+        TaskStep: {
+          Type: 'Task',
+          Resource: 'arn:aws:lambda:::function:my-function',
+          Catch: [
+            {
+              ErrorEquals: [
+                'MockCustomError',
+              ],
+              ResultPath: '$.error',
+              Next: 'CaughtStep',
+            },
+          ],
+          End: true,
+        },
+        CaughtStep: {
+          Type: 'Succeed',
+        },
+      },
+    };
+
+    const resources = [
+      {
+        service: 'lambda',
+        name: 'my-function',
+        function: () => {
+          throw new MockCustomError('Oh no!');
+        },
+      },
+    ];
+
+    const input = { someKey: 'someValue' };
+    const variables = getVariables(definition, input);
+    const simulatorContext = getSimulatorContext({ resources });
+
+    const result = await executeStateMachine(definition, variables, simulatorContext);
+
+    expect(result).toEqual({
+      someKey: 'someValue',
+      error: {
+        Error: 'MockCustomError',
+        Cause: 'Oh no!'
+      },
     });
   });
 

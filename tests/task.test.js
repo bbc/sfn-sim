@@ -1,6 +1,7 @@
 import { vi, test, expect, describe } from 'vitest';
 import { TaskFailedError, SimulatorError } from '../src/errors.js';
 import runTask from '../src/task.js';
+import MockCustomError from './custom-error.js'
 
 describe('lambda', () => {
   describe('invoke (optimised integration)', () => {
@@ -240,13 +241,6 @@ describe('lambda', () => {
     });
 
     test('throws custom error for lambda if not a generic Error type', async() => {
-      class MockCustomError extends Error {
-        constructor() {
-          super()
-          this.name = 'MockCustomError'
-        }
-      }
-
       const simulatorContext = {
         resources: [
           {
