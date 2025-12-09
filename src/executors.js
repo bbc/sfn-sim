@@ -344,7 +344,7 @@ const withRetry = (executor) => async (state, variables, simulatorContext) => {
               ? Math.min(retrier.currentInterval, retrier.MaxDelaySeconds)
               : retrier.currentInterval;
 
-            await wait(interval, simulatorContext);
+            await wait(interval, null, simulatorContext);
 
             retrier.currentInterval = retrier.currentInterval * retrier.BackoffRate;
             retrier.remainingAttempts--;
