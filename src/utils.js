@@ -65,7 +65,7 @@ const getStateResult = (rawInput, stateResult, resultPath) => {
   return input;
 };
 
-const wait = (seconds, timestamp, { options: { simulateWait } } = { options: {} }) => {
+const wait = (seconds, timestamp, { options: { simulateWait } }) => {
   if (simulateWait) {
     let duration;
 
