@@ -1,6 +1,7 @@
 import { vi, test, expect, describe } from 'vitest';
 import { TaskFailedError, SimulatorError } from '../src/errors.js';
 import runTask from '../src/task.js';
+import MockCustomError from './custom-error.js'
 
 describe('lambda', () => {
   describe('invoke (optimised integration)', () => {
@@ -235,6 +236,22 @@ describe('lambda', () => {
       };
 
       const expectedError = new TaskFailedError('Error: Lambda runtime error');
+
+      await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
+    });
+
+    test('throws custom error for lambda if not a generic Error type', async() => {
+      const simulatorContext = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: () => { throw new MockCustomError() }
+          }
+        ],
+      };
+
+      const expectedError = new MockCustomError();
 
       await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
     });

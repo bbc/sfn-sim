@@ -357,7 +357,11 @@ const withRetry = (executor) => async (state, variables, simulatorContext) => {
 
       for (const catcher of state.Catch || []) {
         if (catcher.ErrorEquals.includes(error.name) || catcher.ErrorEquals.includes(ERROR_WILDCARD)) {
-          const stateOutput = getStateResult(rawInput, error.toErrorOutput(), catcher.ResultPath);
+          const errorOutput = error?.toErrorOutput ? error.toErrorOutput() : ({
+            Error: error?.name,
+            Cause: error?.message,
+          });
+          const stateOutput = getStateResult(rawInput, errorOutput, catcher.ResultPath);
 
           const next = catcher.Next;
 
