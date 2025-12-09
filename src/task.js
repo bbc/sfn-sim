@@ -116,7 +116,11 @@ const runLambdaTask = async (resource, input, queryLanguage) => {
     const Payload = await resource.function(input);
     return queryLanguage === 'JSONata' ? { Payload } : Payload;
   } catch (error) {
-    throw new TaskFailedError(error);
+    if (typeof error === 'Error') {
+      throw new TaskFailedError(error);
+    } else {
+      throw error;
+    }
   }
 };
 
