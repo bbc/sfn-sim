@@ -30,6 +30,11 @@ const runTask = async (state, resource, input, queryLanguage) => {
     return runStepFunctionsTask(action, resource, input);
   }
 
+  if (state.Resource.startsWith('arn:aws:states:::aws-sdk:cloudwatch:')) {
+    const action = state.Resource.split(':')[7];
+    return runCloudwatchTask(action, resource, input);
+  }
+
   throw new SimulatorError(`Unimplemented resource [${state.Resource}]`);
 };
 
@@ -103,6 +108,16 @@ const getResource = (state, simulatorContext, input) => {
 
     if (!resource) {
       throw new TaskFailedError(`State machine [${stateMachineName}] not found`);
+    }
+
+    return resource;
+  }
+
+  if (state.Resource.startsWith('arn:aws:states:::aws-sdk:cloudwatch:')) {
+    const resource = resources.find(({ service }) => service === 'cloudwatch');
+
+    if (!resource) {
+      throw new TaskFailedError(`Cloudwatch resource not found`);
     }
 
     return resource;
@@ -230,6 +245,15 @@ const runStepFunctionsTask = async (action, resource, input) => {
   }
 
   throw new SimulatorError(`Unimplemented action [${action}] for service [stepFunctions]`);
+};
+
+const runCloudwatchTask = (action, resource, input) => {
+  if (action === 'putMetricData') {
+    resource.metrics.push(input);
+    return input;
+  }
+
+  throw new SimulatorError(`Unimplemented action [${action}] for service [cloudwatch]`);
 };
 
 const runTaskWithWaitForTaskToken = async (state, simulatorContext, input, queryLanguage = 'JSONPath') => {

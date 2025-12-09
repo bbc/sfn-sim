@@ -579,6 +579,50 @@ describe('sqs', () => {
   });
 });
 
+
+describe('cloudwatch', () => {
+  describe('putMetricData', () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::aws-sdk:cloudwatch:putMetricData',
+      End: true
+    };
+
+    test('sends a metric to cloudwatch', async () => {
+      const metrics = [];
+      const simulatorContext = {
+        resources: [
+          {
+            service: 'cloudwatch',
+            metrics,
+          },
+        ],
+      };
+
+      const input = {
+        Namespace: 'BBC', 
+        MetricData: [
+          {
+            MetricName: 'SomeMetric',
+            Dimensions: [
+              {
+                'Name': 'SomeDimension',
+                'Value': 'some-value'
+              }
+            ],
+            Value: 1,
+            Unit: 'Count'
+          }
+        ]
+      };
+
+      await runTask(state, simulatorContext, input);
+
+      expect(metrics).toEqual([input]);
+    });
+  });
+});
+
 describe('stepFunctions', () => {
   describe('startExecution (optimised integration)', () => {
     describe('sync (wait for output)', () => {
