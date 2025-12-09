@@ -53,6 +53,7 @@ the Lambda and S3 services.
 This resource must contain a `function` field which must be a function. This will be executed as
 your lambda handler.
 
+Lambdas can support custom error handling as long as the `name` property has been set.
 
 ### `s3`
 

@@ -238,6 +238,29 @@ describe('lambda', () => {
 
       await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
     });
+
+    test('throws custom error for lambda if not a generic Error type', async() => {
+      class MockCustomError extends Error {
+        constructor() {
+          super()
+          this.name = 'MockCustomError'
+        }
+      }
+
+      const simulatorContext = {
+        resources: [
+          {
+            service: 'lambda',
+            name: 'my-function',
+            function: () => { throw new MockCustomError() }
+          }
+        ],
+      };
+
+      const expectedError = new MockCustomError();
+
+      await expect(() => runTask(state, simulatorContext, state.Parameters)).rejects.toThrowError(expectedError);
+    });
   });
 });
 
