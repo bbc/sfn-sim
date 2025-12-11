@@ -187,6 +187,15 @@ const runSqsTask = (action, resource, input) => {
   throw new SimulatorError(`Unimplemented action [${action}] for service [sqs]`);
 };
 
+const runCloudwatchTask = (action, resource, input) => {
+  if (action === 'putMetricData') {
+    resource.metrics.push(input);
+    return input;
+  }
+
+  throw new SimulatorError(`Unimplemented action [${action}] for service [cloudwatch]`);
+};
+
 const runStepFunctionsTask = async (action, resource, input) => {
   const { StateMachineArn, Input } = input;
   const stateMachineName = resource.name;
@@ -245,15 +254,6 @@ const runStepFunctionsTask = async (action, resource, input) => {
   }
 
   throw new SimulatorError(`Unimplemented action [${action}] for service [stepFunctions]`);
-};
-
-const runCloudwatchTask = (action, resource, input) => {
-  if (action === 'putMetricData') {
-    resource.metrics.push(input);
-    return input;
-  }
-
-  throw new SimulatorError(`Unimplemented action [${action}] for service [cloudwatch]`);
 };
 
 const runTaskWithWaitForTaskToken = async (state, simulatorContext, input, queryLanguage = 'JSONPath') => {
