@@ -610,6 +610,7 @@ describe('cloudwatch', () => {
         resources: [
           {
             service: 'cloudwatch',
+            name: 'mockCloudwatch',
             metrics,
           },
         ],
@@ -631,6 +632,7 @@ describe('cloudwatch', () => {
       resources: [
         {
           service: 'cloudwatch',
+          name: 'mockCloudwatch',
           metrics: [],
         },
       ],
