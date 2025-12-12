@@ -40,6 +40,11 @@ export interface SQSResource extends Resource {
   messages: string[];
 }
 
+export interface CloudwatchResource extends Resource {
+  service: 'cloudwatch';
+  metrics: object[];
+}
+
 export interface StepFunctionsResource extends Resource {
   service: 'stepFunctions';
   stateMachine: (input: object) => Promise<object>;

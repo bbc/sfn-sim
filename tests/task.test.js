@@ -579,6 +579,72 @@ describe('sqs', () => {
   });
 });
 
+
+describe('cloudwatch', () => {
+  describe('putMetricData', () => {
+    const input = {
+      Namespace: 'BBC', 
+      MetricData: [
+        {
+          MetricName: 'SomeMetric',
+          Dimensions: [
+            {
+              'Name': 'SomeDimension',
+              'Value': 'some-value'
+            }
+          ],
+          Value: 1,
+          Unit: 'Count'
+        }
+      ]
+    };
+
+    test('sends a metric to cloudwatch', async () => {
+      const state = {
+        Type: 'Task',
+        Resource: 'arn:aws:states:::aws-sdk:cloudwatch:putMetricData',
+        End: true
+      };
+      const metrics = [];
+      const simulatorContext = {
+        resources: [
+          {
+            service: 'cloudwatch',
+            name: 'mockCloudwatch',
+            metrics,
+          },
+        ],
+      };
+
+      await runTask(state, simulatorContext, input);
+
+      expect(metrics).toEqual([input]);
+    });
+
+  test('throws a SimulatorError error if the action is not supported', async () => {
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::aws-sdk:cloudwatch:getMetric',
+      End: true,
+    };
+
+    const simulatorContext = {
+      resources: [
+        {
+          service: 'cloudwatch',
+          name: 'mockCloudwatch',
+          metrics: [],
+        },
+      ],
+    };
+
+    const expectedError = new SimulatorError('Unimplemented action [getMetric] for service [cloudwatch]');
+
+    await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
+  });
+  });
+});
+
 describe('stepFunctions', () => {
   describe('startExecution (optimised integration)', () => {
     describe('sync (wait for output)', () => {

@@ -70,6 +70,9 @@ This resource must contain a `messages` field which must be an array.
 
 This resource must contain a `messages` field which must be an array.
 
+### `cloudwatch`
+
+This resource must contain a `metrics` field which must be an array.
 
 ### `stepFunctions`
 
