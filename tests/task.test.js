@@ -579,32 +579,32 @@ describe('sqs', () => {
   });
 });
 
-
 describe('cloudwatch', () => {
+  const input = {
+    Namespace: 'BBC',
+    MetricData: [
+      {
+        MetricName: 'SomeMetric',
+        Dimensions: [
+          {
+            'Name': 'SomeDimension',
+            'Value': 'some-value',
+          },
+        ],
+        Value: 1,
+        Unit: 'Count',
+      },
+    ],
+  };
+
   describe('putMetricData', () => {
-    const input = {
-      Namespace: 'BBC', 
-      MetricData: [
-        {
-          MetricName: 'SomeMetric',
-          Dimensions: [
-            {
-              'Name': 'SomeDimension',
-              'Value': 'some-value'
-            }
-          ],
-          Value: 1,
-          Unit: 'Count'
-        }
-      ]
+    const state = {
+      Type: 'Task',
+      Resource: 'arn:aws:states:::aws-sdk:cloudwatch:putMetricData',
+      End: true
     };
 
     test('sends a metric to cloudwatch', async () => {
-      const state = {
-        Type: 'Task',
-        Resource: 'arn:aws:states:::aws-sdk:cloudwatch:putMetricData',
-        End: true
-      };
       const metrics = [];
       const simulatorContext = {
         resources: [
@@ -620,6 +620,7 @@ describe('cloudwatch', () => {
 
       expect(metrics).toEqual([input]);
     });
+  });
 
   test('throws a SimulatorError error if the action is not supported', async () => {
     const state = {
@@ -641,7 +642,6 @@ describe('cloudwatch', () => {
     const expectedError = new SimulatorError('Unimplemented action [getMetric] for service [cloudwatch]');
 
     await expect(() => runTask(state, simulatorContext, input)).rejects.toThrowError(expectedError);
-  });
   });
 });
 

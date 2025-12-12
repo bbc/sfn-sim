@@ -55,6 +55,7 @@ your lambda handler.
 
 Lambdas can support custom error handling as long as the `name` property has been set.
 
+
 ### `s3`
 
 This resource must contain an `objects` field which must be an array. This can optionally be
@@ -70,9 +71,11 @@ This resource must contain a `messages` field which must be an array.
 
 This resource must contain a `messages` field which must be an array.
 
+
 ### `cloudwatch`
 
 This resource must contain a `metrics` field which must be an array.
+
 
 ### `stepFunctions`
 
