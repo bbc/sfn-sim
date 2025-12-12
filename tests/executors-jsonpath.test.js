@@ -341,8 +341,8 @@ describe('Error handling', () => {
 
     const result = await executeStateMachine(definition, variables, simulatorContext);
 
-    expect(mockWait).toHaveBeenCalledWith(4, expect.any(Object));
-    expect(mockWait).toHaveBeenCalledWith(6, expect.any(Object));
+    expect(mockWait).toHaveBeenCalledWith(4, null, expect.any(Object));
+    expect(mockWait).toHaveBeenCalledWith(6, null, expect.any(Object));
     expect(result).toEqual({ someResult: 'success' });
   });
 
