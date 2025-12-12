@@ -42,7 +42,7 @@ export interface SQSResource extends Resource {
 
 export interface CloudwatchResource extends Resource {
   service: 'cloudwatch';
-  messages: object[];
+  metrics: object[];
 }
 
 export interface StepFunctionsResource extends Resource {
