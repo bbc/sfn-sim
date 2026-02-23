@@ -321,7 +321,7 @@ const executeMapJSONPath = async (state, variables, simulatorContext) => {
 * general
 */
 
-const withRetry = (executor) => async (state, variables, simulatorContext) => {
+const withRetry = (executor, queryLanguage) => async (state, variables, simulatorContext) => {
   const rawInput = variables.states.input;
 
   const retriers = (state.Retry || []).map((retrier) => ({
@@ -361,7 +361,21 @@ const withRetry = (executor) => async (state, variables, simulatorContext) => {
             Error: error?.name,
             Cause: error?.message,
           });
-          const stateOutput = getStateResult(rawInput, errorOutput, catcher.ResultPath);
+
+          let stateOutput;
+          if (queryLanguage === 'JSONata') {
+            const catchVariables = {
+              ...variables,
+              states: {
+                ...variables.states,
+                errorOutput,
+              },
+            };
+            stateOutput = await getJSONataOutput(catcher, catchVariables); // TODO check if a catch has a default Output
+            await assign(catcher, catchVariables);
+          } else {
+            stateOutput = getStateResult(rawInput, errorOutput, catcher.ResultPath);
+          }
 
           const next = catcher.Next;
 
@@ -377,23 +391,23 @@ const withRetry = (executor) => async (state, variables, simulatorContext) => {
 const executors = {
   JSONata: {
     Pass: executePassJSONata,
-    Task: withRetry(executeTaskJSONata),
+    Task: withRetry(executeTaskJSONata, 'JSONata'),
     Choice: executeChoiceJSONata,
     Wait: executeWaitJSONata,
     Succeed: executeSucceedJSONata,
     Fail: executeFailJSONata,
-    Parallel: withRetry(executeParallelJSONata),
-    Map: withRetry(executeMapJSONata),
+    Parallel: withRetry(executeParallelJSONata, 'JSONata'),
+    Map: withRetry(executeMapJSONata, 'JSONata'),
   },
   JSONPath: {
     Pass: executePassJSONPath,
-    Task: withRetry(executeTaskJSONPath),
+    Task: withRetry(executeTaskJSONPath, 'JSONPath'),
     Choice: executeChoiceJSONPath,
     Wait: executeWaitJSONPath,
     Succeed: executeSucceedJSONPath,
     Fail: executeFailJSONPath,
-    Parallel: withRetry(executeParallelJSONPath),
-    Map: withRetry(executeMapJSONPath),
+    Parallel: withRetry(executeParallelJSONPath, 'JSONPath'),
+    Map: withRetry(executeMapJSONPath, 'JSONPath'),
   },
 };
 
