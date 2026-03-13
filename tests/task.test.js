@@ -522,10 +522,8 @@ describe('sqs', () => {
             DataType: 'String'
           },
         },
-        Attributes: {
-          MessageGroupId: 0,
-          MessageDeduplicationId: '1111-1111-1111-1111',
-        },
+        MessageDeduplicationId: '1111-1111-1111-1111',
+        MessageGroupId: '0',
       }
 
       const input = {
