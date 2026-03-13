@@ -177,10 +177,15 @@ const runSnsTask = (action, resource, input) => {
 };
 
 const runSqsTask = (action, resource, input) => {
-  const { MessageBody } = input;
+  const { MessageBody, MessageAttributes, MessageDeduplicationId, MessageGroupId } = input;
 
   if (action === 'sendMessage') {
-    resource.messages.push(MessageBody);
+    resource.messages.push({
+      MessageBody,
+      ...(MessageAttributes !== undefined && { MessageAttributes }),
+      ...(MessageDeduplicationId !== undefined && { MessageDeduplicationId }),
+      ...(MessageGroupId !== undefined && { MessageGroupId }),
+    });
     return input;
   }
 

@@ -35,9 +35,23 @@ export interface SNSResource extends Resource {
   messages: string[];
 }
 
+export interface SQSMessageAttributes {
+  [key: string]: {
+    StringValue: string,
+    DataType: string,
+  }
+}
+
+export interface SQSMessage {
+  MessageBody: string,
+  MessageAttributes?: SQSMessageAttributes,
+  MessageDeduplicationId?: string,
+  MessageGroupId?: string,
+}
+
 export interface SQSResource extends Resource {
   service: 'sqs';
-  messages: string[];
+  messages: SQSMessage[];
 }
 
 export interface CloudwatchResource extends Resource {
