@@ -517,11 +517,57 @@ describe('sqs', () => {
       const input = {
         QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
         MessageBody: 'someString',
+        MessageAttributes: {
+          correlationId: {
+            StringValue: 'someCorrelationId',
+            DataType: 'String'
+          },
+        },
+        Attributes: {
+          MessageGroupId: 0,
+          MessageDeduplicationId: '1111-1111-1111-1111',
+        },
       };
 
       await runTask(state, simulatorContext, input);
 
-      expect(messages).toContain('someString');
+      expect(messages).toContainEqual({
+        MessageBody: 'someString',
+        MessageAttributes: {
+          correlationId: {
+            StringValue: 'someCorrelationId',
+            DataType: 'String'
+          },
+        },
+        Attributes: {
+          MessageGroupId: 0,
+          MessageDeduplicationId: '1111-1111-1111-1111',
+        },
+      });
+    });
+
+    test('sends a message body to a queue', async () => {
+      const messages = [];
+      const simulatorContext = {
+        resources: [
+          {
+            service: 'sqs',
+            name: 'my-queue',
+            messages,
+          },
+        ],
+      };
+
+      const input = {
+        QueueUrl: 'https://sqs.eu-west-1.amazonaws.com/012345678901/my-queue',
+        MessageBody: 'someString',
+      };
+
+      await runTask(state, simulatorContext, input);
+
+      expect(messages).toContainEqual({
+        MessageBody: 'someString',
+      });
     });
   });
 
