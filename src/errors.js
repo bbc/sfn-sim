@@ -90,8 +90,11 @@ class ExceedToleratedFailureThresholdError extends RuntimeError {
 }
 
 class ItemReaderFailedError extends RuntimeError {
-  constructor() {
-    super('A Map state failed to read all items as specified by the "ItemReader" field.');
+  constructor(cause) {
+    const message = cause
+      ? `A Map state failed to read all items as specified by the "ItemReader" field. ${cause}`
+      : 'A Map state failed to read all items as specified by the "ItemReader" field.';
+    super(message);
     this.name = 'States.ItemReaderFailed';
   }
 }
@@ -113,5 +116,7 @@ export {
   TaskFailedError,
   NoChoiceMatchedError,
   IntrinsicFailureError,
+  ExceedToleratedFailureThresholdError,
+  ItemReaderFailedError,
   ERROR_WILDCARD,
 };
