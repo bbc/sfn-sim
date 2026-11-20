@@ -1,6 +1,6 @@
 {
   "name": "sfn-sim",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "AWS Step Functions simulator for unit testing state machines",
   "keywords": [
     "aws",
@@ -23,16 +23,16 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@wmfs/statelint": "^1.30.0",
+    "@wmfs/statelint": "^1.32.0",
     "jshashes": "^1.0.8",
-    "jsonata": "^2.1.0",
+    "jsonata": "^2.2.2",
     "jsonpath": "^1.2.1",
-    "random": "^5.4.1",
+    "random": "^5.5.1",
     "seedrandom": "^3.0.5",
-    "uuid": "^13.0.0"
+    "uuid": "^14.0.3"
   },
   "devDependencies": {
-    "@vitest/coverage-v8": "^4.0.18",
-    "vitest": "^4.0.18"
+    "@vitest/coverage-v8": "^5.1.1",
+    "vitest": "^5.1.1"
   }
 }

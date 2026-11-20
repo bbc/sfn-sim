@@ -371,7 +371,7 @@ const withRetry = (executor, queryLanguage) => async (state, variables, simulato
                 errorOutput,
               },
             };
-            stateOutput = await getJSONataOutput(catcher, catchVariables); // TODO check if a catch has a default Output
+            stateOutput = await getJSONataOutput(catcher, catchVariables, errorOutput);
             await assign(catcher, catchVariables);
           } else {
             stateOutput = getStateResult(rawInput, errorOutput, catcher.ResultPath);

@@ -1,6 +1,6 @@
-import jp from 'jsonpath';
-import jsonata from 'jsonata';
 import { randomBytes } from 'node:crypto';
+import jsonata from 'jsonata';
+import jp from 'jsonpath';
 import { applyFunction } from './intrinsics.js';
 
 const getTaskToken = () => randomBytes(32).toString('base64');
@@ -72,14 +72,14 @@ const wait = (seconds, timestamp, { options: { simulateWait } }) => {
     if (seconds) {
       duration = seconds * 1000;
     } else {
-      duration = new Date(timestamp) - new Date();
+      duration = new Date(timestamp) - Date.now();
 
       if (duration < 0) {
         return;
       }
     }
 
-    return new Promise(resolve => setTimeout(resolve, duration));
+    return new Promise((resolve) => setTimeout(resolve, duration));
   }
 };
 
@@ -112,7 +112,7 @@ const evaluateJSONata = async (value, data) => {
     return newValue;
   }
 
-  return value
+  return value;
 };
 
 const getJSONataInput = async (state, variables) => {
@@ -146,14 +146,14 @@ const assign = async (state, variables) => {
 };
 
 export {
-  getTaskToken,
-  getValue,
-  setValue,
   applyPayloadTemplate,
-  getStateResult,
-  wait,
+  assign,
   evaluateJSONata,
   getJSONataInput,
   getJSONataOutput,
-  assign,
+  getStateResult,
+  getTaskToken,
+  getValue,
+  setValue,
+  wait,
 };
